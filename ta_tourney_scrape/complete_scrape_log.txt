@@ -1,0 +1,25 @@
+==========================================
+ATP 2025 Match Scraper - Complete Pipeline
+==========================================
+
+Step 1: Discovering tournaments...
+usage: __main__.py [-h] [--year YEAR] [--output-dir OUTPUT_DIR]
+                   [--base-csv BASE_CSV] [--verbose]
+                   {discover,scrape_tournaments,scrape_profiles,build,all} ...
+__main__.py: error: unrecognized arguments: --year 2025
+
+Step 2: Scraping tournament pages (this will take ~2 minutes with 2.5s rate limit)...
+usage: __main__.py [-h] [--year YEAR] [--output-dir OUTPUT_DIR]
+                   [--base-csv BASE_CSV] [--verbose]
+                   {discover,scrape_tournaments,scrape_profiles,build,all} ...
+__main__.py: error: unrecognized arguments: --year 2025
+
+Step 3: Analyzing scraped data...
+Tournaments discovered: 28
+
+❌ No matches file found. Scraping may have failed.
+Check for errors above.
+
+==========================================
+Scraping complete! Check output above.
+==========================================

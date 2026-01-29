@@ -1,0 +1,1 @@
+/Users/dennisperumov/miniconda3/bin/python3: No module named ta_tourney_scrape

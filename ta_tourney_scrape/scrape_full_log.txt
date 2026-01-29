@@ -1,0 +1,4 @@
+usage: __main__.py [-h] [--year YEAR] [--output-dir OUTPUT_DIR]
+                   [--base-csv BASE_CSV] [--verbose]
+                   {discover,scrape_tournaments,scrape_profiles,build,all} ...
+__main__.py: error: unrecognized arguments: --year 2025 --output-dir data/intermediate
