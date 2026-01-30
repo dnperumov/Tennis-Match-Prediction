@@ -35,6 +35,8 @@ Tennis-Match-Prediction/
 
 ### Installation
 
+See also: `ENV_SETUP.md`.
+
 1. Clone the repository:
 ```bash
 git clone <repository-url>
@@ -43,8 +45,8 @@ cd Tennis-Match-Prediction
 
 2. Create a virtual environment:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 3. Install dependencies:
