@@ -16,7 +16,7 @@ class DataLoader:
         self.data_dir = data_dir
         self.players: Dict[str, Player] = {}
         
-    def load_data(self, years: range = range(2000, 2025), 
+    def load_data(self, years: range = range(2000, 2027), 
                   download_missing: bool = True) -> pd.DataFrame:
         """
         Load ATP match data for specified years.
@@ -56,7 +56,8 @@ class DataLoader:
         
         atp_matches = pd.concat(dfs, ignore_index=True)
         atp_matches['tourney_date'] = pd.to_datetime(atp_matches['tourney_date'], format='%Y%m%d')
-        atp_matches = atp_matches.sort_values(by='tourney_date').reset_index(drop=True)
+        sort_column = 'match_date' if 'match_date' in atp_matches.columns else 'tourney_date'
+        atp_matches = atp_matches.sort_values(by=sort_column).reset_index(drop=True)
         
         return atp_matches
     
@@ -70,6 +71,9 @@ class DataLoader:
         Returns:
             Tuple of (initial_50, next_25, final_25) splits
         """
+        date_column = 'match_date' if 'match_date' in df.columns else 'tourney_date'
+        sort_columns = [col for col in [date_column, 'tourney_date', 'tourney_id', 'match_num'] if col in df.columns]
+        df = df.sort_values(by=sort_columns).reset_index(drop=True)
         total_matches = len(df)
         initial_50 = df.iloc[:total_matches//2].copy()
         next_25 = df.iloc[total_matches//2:total_matches*3//4].copy()
@@ -97,6 +101,9 @@ class DataLoader:
         seed = row['winner_seed'] if is_winner else row['loser_seed']
         age = row['winner_age'] if is_winner else row['loser_age']
         tourney_id = row['tourney_id']
+        match_date = row.get('match_date', row.get('tourney_date'))
+        minutes = row.get('minutes')
+        serve_points_won_pct, return_points_won_pct, ace_rate, double_fault_rate = self._point_stats(row, is_winner)
 
         if name not in self.players:
             self.players[name] = Player(name)
@@ -111,7 +118,13 @@ class DataLoader:
             hand=hand,
             seed=seed,
             age=age,
-            tourney_id=tourney_id
+            tourney_id=tourney_id,
+            match_date=match_date,
+            minutes=minutes,
+            serve_points_won_pct=serve_points_won_pct,
+            return_points_won_pct=return_points_won_pct,
+            ace_rate=ace_rate,
+            double_fault_rate=double_fault_rate
         )
     
     def update_players_incremental(self, df: pd.DataFrame):
@@ -120,3 +133,29 @@ class DataLoader:
             self._update_player_stats(row, is_winner=True)
             self._update_player_stats(row, is_winner=False)
 
+    @staticmethod
+    def _point_stats(row: pd.Series, is_winner: bool):
+        prefix = 'w' if is_winner else 'l'
+        opponent_prefix = 'l' if is_winner else 'w'
+
+        service_points = pd.to_numeric(row.get(f'{prefix}_svpt'), errors='coerce')
+        first_won = pd.to_numeric(row.get(f'{prefix}_1stWon'), errors='coerce')
+        second_won = pd.to_numeric(row.get(f'{prefix}_2ndWon'), errors='coerce')
+        opponent_service_points = pd.to_numeric(row.get(f'{opponent_prefix}_svpt'), errors='coerce')
+        opponent_first_won = pd.to_numeric(row.get(f'{opponent_prefix}_1stWon'), errors='coerce')
+        opponent_second_won = pd.to_numeric(row.get(f'{opponent_prefix}_2ndWon'), errors='coerce')
+        aces = pd.to_numeric(row.get(f'{prefix}_ace'), errors='coerce')
+        double_faults = pd.to_numeric(row.get(f'{prefix}_df'), errors='coerce')
+
+        serve_points_won = None
+        return_points_won = None
+        ace_rate = None
+        double_fault_rate = None
+        if pd.notna(service_points) and service_points > 0:
+            serve_points_won = (first_won + second_won) / service_points
+            ace_rate = aces / service_points
+            double_fault_rate = double_faults / service_points
+        if pd.notna(opponent_service_points) and opponent_service_points > 0:
+            return_points_won = 1 - ((opponent_first_won + opponent_second_won) / opponent_service_points)
+
+        return serve_points_won, return_points_won, ace_rate, double_fault_rate

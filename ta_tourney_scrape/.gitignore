@@ -26,10 +26,10 @@ env/
 ENV/
 
 # Data files
-data/
+# data/  # Uncommented to track scraped 2025 match data
 *.parquet
-*.csv
-*.json
+# *.csv  # Uncommented to allow CSV files in data/ directory
+# *.json  # Uncommented to allow JSON files in data/ directory
 
 # Cache
 *.cache

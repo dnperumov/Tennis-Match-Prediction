@@ -1,0 +1,306 @@
+snapshot_time,match_date,tourney_name,round,surface,player,opponent,side,model_probability,market_probability,odds,closing_odds,clv,stake,won,profit,friction_adjusted_profit,execution_odds_source,closing_odds_source
+,2019-01-01,Doha,R32,Hard,Pierre Hugues Herbert,Dominic Thiem,player2,0.3839362145109013,0.25,3.75,3.77,-0.0053050397877983935,1.0,True,2.75,2.695,selected,average_proxy
+,2019-01-01,Doha,R32,Hard,Damir Dzumhur,Novak Djokovic,player2,0.1185597029463446,0.0871369294605809,11.0,12.85,-0.14396887159533067,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-02,Pune,R16,Hard,Kevin Anderson,Laslo Djere,player2,0.8745819915878583,0.75,1.25,1.32,-0.053030303030303094,1.0,True,0.25,0.2450000000000001,selected,average_proxy
+,2019-01-02,Brisbane,R16,Hard,Denis Kudla,Kei Nishikori,player2,0.2670259796682126,0.1883116883116883,5.0,5.17,-0.03288201160541582,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-03,Brisbane,QF,Hard,Grigor Dimitrov,Kei Nishikori,player2,0.5007591873557637,0.411764705882353,2.3,2.26,0.017699115044247815,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-04,Doha,SF,Hard,Roberto Bautista Agut,Novak Djokovic,player2,0.2144838288822134,0.1883116883116883,5.0,4.95,0.010101010101010166,1.0,True,4.0,3.92,selected,average_proxy
+,2019-01-06,Brisbane,F,Hard,Daniil Medvedev,Kei Nishikori,player2,0.4842518046824866,0.398477157360406,2.37,2.36,0.004237288135593209,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-08,Auckland,R16,Hard,Taylor Fritz,John Isner,player1,0.4385733378180537,0.3923076923076922,2.37,2.4,-0.012499999999999956,1.0,True,1.37,1.3426,selected,average_proxy
+,2019-01-14,Australian Open,R128,Hard,Peter Gojowczyk,Karen Khachanov,player1,0.1636695901770869,0.1458607095926412,6.5,7.07,-0.08062234794908063,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-14,Australian Open,R128,Hard,John Isner,Reilly Opelka,player1,0.8483397340956729,0.6359223300970874,1.5,1.46,0.027397260273972712,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-14,Australian Open,R128,Hard,James Duckworth,Rafael Nadal,player2,0.1899965654479229,0.0871369294605809,11.0,11.64,-0.054982817869415834,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-15,Australian Open,R128,Hard,Kamil Majchrzak,Kei Nishikori,player1,0.1139187368674845,0.0566037735849056,17.0,15.25,0.11475409836065564,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-15,Australian Open,R128,Hard,Steve Darcis,Borna Coric,player2,0.187909012925324,0.1716867469879518,5.5,5.37,0.024208566108007368,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-15,Australian Open,R128,Hard,Benoit Paire,Dominic Thiem,player1,0.4295688741376467,0.2544731610337972,3.75,3.68,0.01902173913043481,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-16,Australian Open,R64,Hard,John Millman,Roberto Bautista Agut,player1,0.3184295318818628,0.281183932346723,3.4,3.46,-0.017341040462427793,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-16,Australian Open,R64,Hard,Matthew Ebden,Rafael Nadal,player2,0.1379670789255149,0.0958408679927667,10.0,9.92,0.008064516129032251,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-17,Australian Open,R64,Hard,Novak Djokovic,Jo-Wilfried Tsonga,player1,0.9729929802649622,0.9041591320072332,1.06,1.06,0.0,1.0,True,0.06000000000000005,0.05879999999999996,selected,average_proxy
+,2019-01-18,Australian Open,R32,Hard,Marin Cilic,Fernando Verdasco,player2,0.8350135629859144,0.7455268389662029,1.28,1.3,-0.015384615384615441,1.0,True,0.28,0.2744,selected,average_proxy
+,2019-01-18,Australian Open,R32,Hard,Diego Schwartzman,Tomas Berdych,player1,0.2680590834466606,0.238095238095238,4.0,4.04,-0.00990099009900991,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-19,Australian Open,R32,Hard,Alex Bolt,Alexander Zverev,player1,0.1601926421198309,0.074074074074074,13.0,10.63,0.22295390404515514,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-20,Australian Open,R16,Hard,Marin Cilic,Roberto Bautista Agut,player1,0.6941862121697782,0.549738219895288,1.72,1.72,0.0,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-20,Australian Open,R16,Hard,Roger Federer,Stefanos Tsitsipas,player1,0.9161042935423592,0.8283132530120482,1.14,1.16,-0.017241379310344862,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-21,Australian Open,R16,Hard,Daniil Medvedev,Novak Djokovic,player1,0.1811438979727958,0.1458607095926412,6.5,6.4,0.015625,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-21,Australian Open,R16,Hard,Milos Raonic,Alexander Zverev,player1,0.5785022523701722,0.4300518134715025,2.2,2.13,0.032863849765258246,1.0,True,1.2000000000000002,1.1760000000000002,selected,average_proxy
+,2019-01-24,Australian Open,SF,Hard,Rafael Nadal,Stefanos Tsitsipas,player2,0.935165203896558,0.8116883116883117,1.16,1.18,-0.016949152542372947,1.0,True,0.15999999999999992,0.15679999999999983,selected,average_proxy
+,2019-01-25,Australian Open,SF,Hard,Lucas Pouille,Novak Djokovic,player2,0.1122943720328841,0.0871369294605809,11.0,10.45,0.052631578947368585,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-01-27,Australian Open,F,Hard,Novak Djokovic,Rafael Nadal,player2,0.6289621303312996,0.5526992287917738,1.74,1.75,-0.005714285714285672,1.0,True,0.74,0.7252000000000001,selected,average_proxy
+,2019-02-07,Cordoba,R16,Clay,Alessandro Giannessi,Diego Schwartzman,player1,0.1459501078774676,0.118942731277533,8.0,7.99,0.0012515644555695093,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-13,Rotterdam,R32,Hard,Thomas Fabbiano,Jo-Wilfried Tsonga,player2,0.2148646849177715,0.1716867469879518,5.5,6.2,-0.11290322580645162,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-14,New York,R16,Hard,John Isner,Bernard Tomic,player1,0.8811101998322786,0.6626506024096386,1.4,1.37,0.021897810218977964,1.0,True,0.3999999999999999,0.3919999999999999,selected,average_proxy
+,2019-02-14,Buenos Aires,R16,Clay,Maximilian Marterer,Dominic Thiem,player1,0.2495758246734304,0.2077464788732394,4.5,4.87,-0.07597535934291588,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-15,Rotterdam,QF,Hard,Damir Dzumhur,Gael Monfils,player2,0.2576282323974606,0.2198198198198198,4.33,4.25,0.018823529411764683,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-15,Rotterdam,QF,Hard,Marton Fucsovics,Kei Nishikori,player2,0.2469925987799391,0.2105263157894736,4.5,4.58,-0.017467248908296984,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-15,Buenos Aires,QF,Clay,Pablo Cuevas,Dominic Thiem,player2,0.3298976373324863,0.2708333333333333,3.5,3.62,-0.03314917127071826,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-16,Rotterdam,SF,Hard,Stan Wawrinka,Kei Nishikori,player1,0.4361530300122299,0.3796526054590571,2.5,2.48,0.008064516129032251,1.0,True,1.5,1.4699999999999998,selected,average_proxy
+,2019-02-16,New York,QF,Hard,Jordan Thompson,John Isner,player1,0.4131237845606192,0.281183932346723,3.4,3.52,-0.03409090909090917,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-16,Buenos Aires,SF,Clay,Dominic Thiem,Diego Schwartzman,player1,0.8028950454710537,0.6818181818181818,1.4,1.42,-0.014084507042253502,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-20,Delray Beach,R32,Hard,Juan Martin del Potro,Yoshihito Nishioka,player1,0.8327394094809718,0.75,1.25,1.32,-0.053030303030303094,1.0,True,0.25,0.2450000000000001,selected,average_proxy
+,2019-02-20,Delray Beach,R16,Hard,John Isner,Lukas Lacko,player1,0.9439857054403364,0.8541392904073586,1.11,1.12,-0.008928571428571397,1.0,True,0.1100000000000001,0.10780000000000012,selected,average_proxy
+,2019-02-22,Delray Beach,R16,Hard,Juan Martin del Potro,Reilly Opelka,player2,0.6929307664478245,0.625,1.5,1.51,-0.0066225165562914245,1.0,True,0.5,0.49,selected,average_proxy
+,2019-02-22,Delray Beach,QF,Hard,Adrian Mannarino,John Isner,player1,0.2461217869860295,0.2198198198198198,4.33,4.1,0.056097560975609806,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-23,Delray Beach,SF,Hard,John Isner,Daniel Evans,player1,0.7425777000493743,0.6563245823389022,1.44,1.42,0.014084507042253502,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-25,Dubai,R32,Hard,Roger Federer,Philipp Kohlschreiber,player2,0.98,0.8641975308641975,1.1,1.11,-0.009009009009009028,1.0,True,0.10000000000000009,0.09800000000000009,selected,average_proxy
+,2019-02-26,Dubai,R32,Hard,Marin Cilic,Gael Monfils,player2,0.6920903471009866,0.5135135135135135,1.8,1.93,-0.06735751295336778,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-26,Dubai,R32,Hard,Benoit Paire,Kei Nishikori,player2,0.2739965459158103,0.2077464788732394,4.5,4.82,-0.06639004149377603,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-27,Dubai,R16,Hard,Egor Gerasimov,Stefanos Tsitsipas,player2,0.2438948819351482,0.2169981916817359,4.33,4.3,0.006976744186046657,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-27,Acapulco,R32,Hard,Mischa Zverev,Rafael Nadal,player2,0.1048650417122234,0.0871369294605809,11.0,10.09,0.09018830525272548,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-27,Acapulco,R16,Hard,Peter Gojowczyk,John Millman,player1,0.375125272940085,0.3373493975903614,2.75,2.79,-0.014336917562724039,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-28,Dubai,QF,Hard,Marton Fucsovics,Roger Federer,player1,0.2855579982482905,0.1883116883116883,5.0,5.05,-0.00990099009900991,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-28,Acapulco,R16,Hard,David Ferrer,Alexander Zverev,player2,0.2429309719264157,0.1883116883116883,5.0,4.89,0.02249488752556239,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-02-28,Acapulco,R16,Hard,Steve Johnson,Stan Wawrinka,player1,0.2872455995351397,0.25,3.75,3.65,0.027397260273972712,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-01,Sao Paulo,QF,Clay,Marco Trungelliti,Guido Pella,player1,0.2339450992571599,0.2105263157894736,4.5,4.62,-0.025974025974025983,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-01,Acapulco,QF,Hard,John Millman,John Isner,player1,0.462837170393833,0.411764705882353,2.3,2.28,0.00877192982456143,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-02,Dubai,F,Hard,Roger Federer,Stefanos Tsitsipas,player1,0.933101929334694,0.7455268389662029,1.28,1.32,-0.030303030303030276,1.0,True,0.28,0.2744,selected,average_proxy
+,2019-03-02,Acapulco,SF,Hard,Cameron Norrie,Alexander Zverev,player2,0.280874111517174,0.1883116883116883,5.0,5.09,-0.017681728880157177,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-02,Acapulco,SF,Hard,Nick Kyrgios,John Isner,player2,0.6137664344440832,0.549738219895288,1.72,1.74,-0.011494252873563204,1.0,True,0.72,0.7056,selected,average_proxy
+,2019-03-09,Indian Wells Masters,R64,Hard,Felix Auger Aliassime,Stefanos Tsitsipas,player1,0.4138869612951542,0.3119266055045871,3.0,3.03,-0.009900990099009799,1.0,True,2.0,1.96,selected,average_proxy
+,2019-03-10,Indian Wells Masters,R64,Hard,Mackenzie Mcdonald,Daniil Medvedev,player1,0.2872455995351397,0.25,3.75,3.94,-0.048223350253807085,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-10,Indian Wells Masters,R64,Hard,Nicolas Jarry,Kyle Edmund,player1,0.3144809930787147,0.2765957446808511,3.4,3.43,-0.008746355685131268,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-10,Indian Wells Masters,R64,Hard,Martin Klizan,Alexander Zverev,player2,0.2308793200028611,0.1716867469879518,5.5,6.12,-0.10130718954248363,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-10,Indian Wells Masters,R64,Hard,Jordan Thompson,Dominic Thiem,player1,0.3941149933600709,0.2903930131004367,3.25,3.36,-0.03273809523809523,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-11,Indian Wells Masters,R32,Hard,Jan Lennard Struff,Alexander Zverev,player2,0.2797877163503044,0.1883116883116883,5.0,4.94,0.012145748987854255,1.0,True,4.0,3.92,selected,average_proxy
+,2019-03-11,Indian Wells Masters,R32,Hard,Gilles Simon,Dominic Thiem,player1,0.441125461038212,0.3181818181818181,3.0,2.97,0.010101010101009944,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-12,Indian Wells Masters,R32,Hard,John Isner,Guido Pella,player2,0.8583662356932734,0.7801801801801801,1.22,1.24,-0.016129032258064502,1.0,True,0.21999999999999997,0.2156,selected,average_proxy
+,2019-03-12,Indian Wells Masters,R32,Hard,Hubert Hurkacz,Kei Nishikori,player1,0.357941780566305,0.2982456140350877,3.2,3.38,-0.053254437869822424,1.0,True,2.2,2.156,selected,average_proxy
+,2019-03-13,Indian Wells Masters,R16,Hard,John Isner,Karen Khachanov,player1,0.6994637459300199,0.588235294117647,1.61,1.64,-0.018292682926829174,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-13,Indian Wells Masters,R16,Hard,Kyle Edmund,Roger Federer,player1,0.3454906144828118,0.2105263157894736,4.5,4.52,-0.004424778761061843,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-14,Indian Wells Masters,R16,Hard,Ivo Karlovic,Dominic Thiem,player1,0.4021360451256207,0.2708333333333333,3.5,3.43,0.020408163265306145,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-16,Indian Wells Masters,SF,Hard,Dominic Thiem,Milos Raonic,player1,0.4376037219198967,0.398477157360406,2.37,2.37,0.0,1.0,True,1.37,1.3426,selected,average_proxy
+,2019-03-17,Indian Wells Masters,F,Hard,Dominic Thiem,Roger Federer,player1,0.2673936652047067,0.238095238095238,4.0,3.98,0.005025125628140614,1.0,True,3.0,2.94,selected,average_proxy
+,2019-03-22,Miami Masters,R64,Hard,Kei Nishikori,Dusan Lajovic,player1,0.8891150459083326,0.7922535211267606,1.18,1.16,0.01724137931034475,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-22,Miami Masters,R64,Hard,Mischa Zverev,Nikoloz Basilashvili,player1,0.3144956950993925,0.25,3.75,3.7,0.013513513513513375,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-22,Miami Masters,R64,Hard,Hubert Hurkacz,Dominic Thiem,player1,0.405774556015049,0.3119266055045871,3.0,3.18,-0.05660377358490576,1.0,True,2.0,1.96,selected,average_proxy
+,2019-03-22,Miami Masters,R64,Hard,Ilya Ivashka,Kyle Edmund,player1,0.2311652623409256,0.2077464788732394,4.5,4.6,-0.021739130434782483,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-23,Miami Masters,R64,Hard,Mackenzie Mcdonald,Stefanos Tsitsipas,player1,0.3852654625235582,0.25,3.75,3.84,-0.0234375,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-24,Miami Masters,R64,Hard,David Ferrer,Alexander Zverev,player2,0.2976327022911728,0.2337164750957854,4.0,4.05,-0.012345679012345623,1.0,True,3.0,2.94,selected,average_proxy
+,2019-03-25,Miami Masters,R32,Hard,Kevin Anderson,Joao Sousa,player2,0.6923244947344314,0.6203473945409429,1.53,1.52,0.006578947368421018,1.0,True,0.53,0.5194000000000001,selected,average_proxy
+,2019-03-26,Miami Masters,R32,Hard,Leonardo Mayer,Stefanos Tsitsipas,player1,0.3633479864152513,0.238095238095238,4.0,3.84,0.04166666666666674,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-26,Miami Masters,R16,Hard,Kevin Anderson,Jordan Thompson,player1,0.8053040158369336,0.6818181818181818,1.4,1.42,-0.014084507042253502,1.0,True,0.3999999999999999,0.3919999999999999,selected,average_proxy
+,2019-03-26,Miami Masters,R16,Hard,John Isner,Kyle Edmund,player2,0.6770387579276788,0.5,1.9,1.85,0.027027027027026973,1.0,True,0.8999999999999999,0.8819999999999999,selected,average_proxy
+,2019-03-26,Miami Masters,R16,Hard,Novak Djokovic,Roberto Bautista Agut,player1,0.8611461663447785,0.7894736842105263,1.2,1.19,0.008403361344537785,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-27,Miami Masters,R16,Hard,Denis Shapovalov,Stefanos Tsitsipas,player1,0.544354466611205,0.4300518134715025,2.2,2.2,0.0,1.0,True,1.2000000000000002,1.1760000000000002,selected,average_proxy
+,2019-03-27,Miami Masters,R16,Hard,Daniil Medvedev,Roger Federer,player1,0.3838752477991174,0.2708333333333333,3.5,3.52,-0.005681818181818232,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-29,Miami Masters,QF,Hard,Kevin Anderson,Roger Federer,player1,0.3292229235457252,0.1883116883116883,5.0,4.86,0.028806584362139898,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-03-29,Miami Masters,SF,Hard,Roger Federer,Denis Shapovalov,player1,0.9400480654224102,0.7894736842105263,1.2,1.2,0.0,1.0,True,0.19999999999999996,0.19599999999999995,selected,average_proxy
+,2019-04-09,Marrakech,R32,Clay,Denis Istomin,Alexander Zverev,player2,0.189190420276615,0.1573033707865168,6.0,7.0,-0.1428571428571429,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-04-11,Marrakech,R16,Clay,Alexander Zverev,Jaume Munar,player2,0.8433427235808576,0.75,1.25,1.24,0.008064516129032251,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-04-17,Monte Carlo Masters,R32,Clay,Dominic Thiem,Martin Klizan,player2,0.8694876899604718,0.783001808318264,1.2,1.22,-0.016393442622950838,1.0,True,0.19999999999999996,0.19599999999999995,selected,average_proxy
+,2019-04-17,Monte Carlo Masters,R32,Clay,Mikhail Kukushkin,Stefanos Tsitsipas,player1,0.4007267638270496,0.25,3.75,4.06,-0.07635467980295563,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-04-18,Monte Carlo Masters,R16,Clay,Alexander Zverev,Fabio Fognini,player2,0.8520965770577356,0.7619047619047619,1.25,1.25,0.0,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-04-18,Monte Carlo Masters,R16,Clay,Dominic Thiem,Dusan Lajovic,player2,0.9333080320045544,0.8116883116883117,1.16,1.17,-0.008547008547008517,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-04-18,Monte Carlo Masters,R16,Clay,Stefanos Tsitsipas,Daniil Medvedev,player1,0.687716290047987,0.549738219895288,1.72,1.76,-0.022727272727272707,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-04-19,Monte Carlo Masters,QF,Clay,Guido Pella,Rafael Nadal,player2,0.0939378824139229,0.0566037735849056,17.0,15.87,0.07120352867044755,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-04-23,Barcelona,R32,Clay,Dominic Thiem,Diego Schwartzman,player1,0.8487432959728847,0.7234042553191489,1.3,1.3,0.0,1.0,True,0.30000000000000004,0.29400000000000004,selected,average_proxy
+,2019-04-23,Barcelona,R32,Clay,Stefanos Tsitsipas,Marton Fucsovics,player1,0.8187738278801522,0.7234042553191489,1.3,1.32,-0.015151515151515138,1.0,True,0.30000000000000004,0.29400000000000004,selected,average_proxy
+,2019-04-25,Barcelona,R16,Clay,Felix Auger Aliassime,Kei Nishikori,player1,0.4662545576587013,0.411764705882353,2.3,2.25,0.022222222222222143,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-04-25,Barcelona,R16,Clay,Jan Lennard Struff,Stefanos Tsitsipas,player1,0.3984309629892396,0.2544731610337972,3.75,3.73,0.00536193029490617,1.0,True,2.75,2.695,selected,average_proxy
+,2019-04-25,Barcelona,R16,Clay,David Ferrer,Rafael Nadal,player2,0.1944188789016196,0.1716867469879518,5.5,5.59,-0.01610017889087656,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-04-26,Barcelona,QF,Clay,Kei Nishikori,Roberto Carballes Baena,player1,0.8764007390558989,0.7801801801801801,1.22,1.27,-0.03937007874015752,1.0,True,0.21999999999999997,0.2156,selected,average_proxy
+,2019-04-26,Barcelona,QF,Clay,Jan Lennard Struff,Rafael Nadal,player1,0.1852382574031839,0.0958408679927667,10.0,9.4,0.06382978723404253,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-04-28,Barcelona,F,Clay,Dominic Thiem,Daniil Medvedev,player1,0.9064614817873048,0.7455268389662029,1.28,1.29,-0.007751937984496138,1.0,True,0.28,0.2744,selected,average_proxy
+,2019-05-01,Estoril,R16,Clay,Guido Andreozzi,Stefanos Tsitsipas,player1,0.2390279295595796,0.2077464788732394,4.5,4.97,-0.09456740442655931,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-02,Munich,R16,Clay,Taro Daniel,Guido Pella,player2,0.245010499258368,0.2077464788732394,4.5,4.82,-0.06639004149377603,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-04,Estoril,SF,Clay,Stefanos Tsitsipas,David Goffin,player1,0.7909412523065422,0.6203473945409429,1.53,1.52,0.006578947368421018,1.0,True,0.53,0.5194000000000001,selected,average_proxy
+,2019-05-07,Madrid Masters,R32,Clay,Reilly Opelka,Dominic Thiem,player2,0.2925881497575151,0.1573033707865168,6.0,5.88,0.020408163265306145,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-07,Madrid Masters,R32,Clay,Roger Federer,Richard Gasquet,player2,0.98,0.8641975308641975,1.1,1.1,0.0,1.0,True,0.10000000000000009,0.09800000000000009,selected,average_proxy
+,2019-05-08,Madrid Masters,R32,Clay,Felix Auger Aliassime,Rafael Nadal,player2,0.2270892493362614,0.1716867469879518,5.5,5.29,0.03969754253308122,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-08,Madrid Masters,R32,Clay,Hugo Dellien,Kei Nishikori,player1,0.2638053622564897,0.1573033707865168,6.0,5.78,0.03806228373702414,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-08,Madrid Masters,R32,Clay,Juan Martin del Potro,Laslo Djere,player1,0.7136937441224965,0.5376344086021505,1.72,1.76,-0.022727272727272707,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-09,Madrid Masters,R16,Clay,Frances Tiafoe,Rafael Nadal,player2,0.0974302740461868,0.0871369294605809,11.0,10.39,0.05871029836381125,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-09,Madrid Masters,R16,Clay,Stan Wawrinka,Kei Nishikori,player2,0.6372499025662042,0.549738219895288,1.72,1.72,0.0,1.0,True,0.72,0.7056,selected,average_proxy
+,2019-05-09,Madrid Masters,R16,Clay,Hubert Hurkacz,Alexander Zverev,player2,0.3559133490686498,0.2982456140350877,3.2,2.93,0.0921501706484642,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-09,Madrid Masters,R16,Clay,Stefanos Tsitsipas,Fernando Verdasco,player1,0.7882111930422513,0.7188160676532769,1.33,1.35,-0.014814814814814836,1.0,True,0.33000000000000007,0.32340000000000013,selected,average_proxy
+,2019-05-09,Madrid Masters,R16,Clay,Fabio Fognini,Dominic Thiem,player2,0.3728327317022896,0.2982456140350877,3.2,3.17,0.009463722397476504,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-09,Madrid Masters,R16,Clay,Gael Monfils,Roger Federer,player2,0.325221610549263,0.2708333333333333,3.5,3.62,-0.03314917127071826,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-10,Madrid Masters,QF,Clay,Stefanos Tsitsipas,Alexander Zverev,player1,0.7118636155310849,0.5699481865284974,1.66,1.69,-0.017751479289940808,1.0,True,0.6599999999999999,0.6467999999999998,selected,average_proxy
+,2019-05-10,Madrid Masters,QF,Clay,Roger Federer,Dominic Thiem,player1,0.5289733624024062,0.3436754176610979,2.75,2.83,-0.028268551236749095,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-10,Madrid Masters,QF,Clay,Marin Cilic,Novak Djokovic,player2,0.1882660400000825,0.1716867469879518,5.5,5.77,-0.04679376083188902,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-11,Madrid Masters,SF,Clay,Stefanos Tsitsipas,Rafael Nadal,player1,0.185825805596897,0.1358024691358024,7.0,6.45,0.0852713178294573,1.0,True,6.0,5.88,selected,average_proxy
+,2019-05-12,Madrid Masters,F,Clay,Stefanos Tsitsipas,Novak Djokovic,player1,0.531085073633211,0.3181818181818181,3.0,2.85,0.05263157894736836,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-14,Rome Masters,R32,Clay,Matteo Berrettini,Alexander Zverev,player1,0.4722953705590804,0.3923076923076922,2.37,2.35,0.008510638297872353,1.0,True,1.37,1.3426,selected,average_proxy
+,2019-05-16,Rome Masters,R32,Clay,Taylor Fritz,Kei Nishikori,player1,0.4743029223484762,0.2677824267782427,3.5,3.47,0.008645533141210304,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-17,Rome Masters,QF,Clay,Stefanos Tsitsipas,Roger Federer,player1,0.7743954191177218,0.5699481865284974,1.66,1.67,-0.005988023952095856,1.0,True,0.6599999999999999,0.6467999999999998,selected,average_proxy
+,2019-05-17,Rome Masters,QF,Clay,Kei Nishikori,Diego Schwartzman,player2,0.7099535942968718,0.6203473945409429,1.53,1.58,-0.03164556962025322,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-18,Rome Masters,SF,Clay,Stefanos Tsitsipas,Rafael Nadal,player1,0.3506875674527021,0.238095238095238,4.0,4.2,-0.04761904761904767,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-22,Geneva,R16,Clay,Damir Dzumhur,Stan Wawrinka,player1,0.2907396994332684,0.25,3.75,3.86,-0.02849740932642486,1.0,True,2.75,2.695,selected,average_proxy
+,2019-05-23,Geneva,QF,Clay,Hugo Dellien,Alexander Zverev,player1,0.2669611041507546,0.1716867469879518,5.5,5.07,0.08481262327416172,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-24,Geneva,SF,Clay,Federico Delbonis,Alexander Zverev,player1,0.4878143981624637,0.3181818181818181,3.0,2.87,0.04529616724738683,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-25,Geneva,F,Clay,Alexander Zverev,Nicolas Jarry,player1,0.8956761267007055,0.6563245823389022,1.44,1.45,-0.006896551724137945,1.0,True,0.43999999999999995,0.4312,selected,average_proxy
+,2019-05-27,Roland Garros,R128,Clay,Hubert Hurkacz,Novak Djokovic,player2,0.2179334251887601,0.0642545227698066,15.0,13.12,0.14329268292682928,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-27,Roland Garros,R128,Clay,Tommy Paul,Dominic Thiem,player2,0.087284283801614,0.0509490509490509,19.0,16.85,0.12759643916913932,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-27,Roland Garros,R128,Clay,Mischa Zverev,Richard Gasquet,player2,0.1591943360738165,0.1458607095926412,6.5,6.3,0.031746031746031855,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-27,Roland Garros,R128,Clay,Yannick Hanfmann,Rafael Nadal,player2,0.0420565082082431,0.0334944175970671,29.0,24.63,0.17742590336987418,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-28,Roland Garros,R128,Clay,Juan Martin del Potro,Nicolas Jarry,player1,0.8088000349077358,0.7291666666666667,1.3,1.27,0.023622047244094446,1.0,True,0.30000000000000004,0.29400000000000004,selected,average_proxy
+,2019-05-29,Roland Garros,R64,Clay,Jo-Wilfried Tsonga,Kei Nishikori,player1,0.3477648935702702,0.281183932346723,3.4,3.23,0.05263157894736836,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-29,Roland Garros,R64,Clay,Yannick Maden,Rafael Nadal,player1,0.0617633556450079,0.0238560068568163,41.0,28.49,0.4391014391014392,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-30,Roland Garros,R64,Clay,Radu Albot,Jan Lennard Struff,player1,0.3279015462697522,0.2982456140350877,3.2,3.05,0.049180327868852514,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-30,Roland Garros,R64,Clay,Mikael Ymer,Alexander Zverev,player1,0.2384771728120515,0.1716867469879518,5.5,6.25,-0.12,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-30,Roland Garros,R64,Clay,Alexander Bublik,Dominic Thiem,player2,0.0903853488077852,0.0509490509490509,19.0,18.07,0.051466519092418395,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-30,Roland Garros,R64,Clay,Yoshihito Nishioka,Juan Martin del Potro,player1,0.1344227181787433,0.118942731277533,8.0,8.44,-0.05213270142180093,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-31,Roland Garros,R32,Clay,Casper Ruud,Roger Federer,player1,0.1854402822156741,0.1458607095926412,6.5,6.4,0.015625,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-05-31,Roland Garros,R32,Clay,Kei Nishikori,Laslo Djere,player1,0.8371696815200517,0.7291666666666667,1.3,1.3,0.0,1.0,True,0.30000000000000004,0.29400000000000004,selected,average_proxy
+,2019-06-01,Roland Garros,R32,Clay,Stefanos Tsitsipas,Filip Krajinovic,player1,0.98,0.8116883116883117,1.16,1.17,-0.008547008547008517,1.0,True,0.15999999999999992,0.15679999999999983,selected,average_proxy
+,2019-06-03,Roland Garros,R16,Clay,Alexander Zverev,Fabio Fognini,player1,0.5637744261047714,0.450261780104712,2.1,2.04,0.02941176470588247,1.0,True,1.1,1.0780000000000003,selected,average_proxy
+,2019-06-03,Roland Garros,R16,Clay,Karen Khachanov,Juan Martin del Potro,player1,0.4124575985373279,0.3436754176610979,2.75,2.79,-0.014336917562724039,1.0,True,1.75,1.7149999999999999,selected,average_proxy
+,2019-06-04,Roland Garros,QF,Clay,Stan Wawrinka,Roger Federer,player2,0.3332465627705301,0.2982456140350877,3.2,3.08,0.038961038961039085,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-06-06,Roland Garros,QF,Clay,Alexander Zverev,Novak Djokovic,player2,0.1636625532853023,0.1358024691358024,7.0,6.6,0.06060606060606055,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-06-09,Roland Garros,F,Clay,Rafael Nadal,Dominic Thiem,player1,0.9021003339200526,0.7983193277310925,1.2,1.21,-0.008264462809917328,1.0,True,0.19999999999999996,0.19599999999999995,selected,average_proxy
+,2019-06-13,s Hertogenbosch,R16,Grass,Nicolas Jarry,Stefanos Tsitsipas,player1,0.3527227084476713,0.2077464788732394,4.5,4.53,-0.0066225165562914245,1.0,True,3.5,3.4299999999999997,selected,average_proxy
+,2019-06-17,Queen's Club,R32,Grass,Kevin Anderson,Cameron Norrie,player1,0.886630576522186,0.7096069868995633,1.33,1.36,-0.022058823529411797,1.0,True,0.33000000000000007,0.32340000000000013,selected,average_proxy
+,2019-06-17,Halle,R32,Grass,Robin Haase,Alexander Zverev,player1,0.4613470850446356,0.1883116883116883,5.0,5.2,-0.03846153846153855,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-06-19,Halle,R16,Grass,Karen Khachanov,Jan Lennard Struff,player2,0.5590607571743953,0.4864864864864864,1.9,1.94,-0.020618556701030966,1.0,True,0.8999999999999999,0.8819999999999999,selected,average_proxy
+,2019-06-20,Queen's Club,R32,Grass,Kyle Edmund,Stefanos Tsitsipas,player1,0.4854402837346508,0.3119266055045871,3.0,3.14,-0.04458598726114649,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-06-20,Queen's Club,R16,Grass,Kevin Anderson,Gilles Simon,player2,0.8787093965109265,0.7096069868995633,1.33,1.34,-0.007462686567164201,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-06-20,Queen's Club,R16,Grass,Jeremy Chardy,Stefanos Tsitsipas,player2,0.4002259401728639,0.2677824267782427,3.5,3.65,-0.041095890410958846,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-06-20,Halle,R16,Grass,Steve Johnson,Alexander Zverev,player1,0.4240855425711378,0.375,2.5,2.62,-0.04580152671755733,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-06-20,Halle,R16,Grass,Jo-Wilfried Tsonga,Roger Federer,player1,0.2126761704282526,0.1883116883116883,5.0,4.97,0.006036217303823088,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-06-22,Halle,SF,Grass,Pierre Hugues Herbert,Roger Federer,player2,0.1466697753472593,0.118942731277533,8.0,8.24,-0.029126213592232997,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-06-28,Eastbourne,SF,Grass,Taylor Fritz,Kyle Edmund,player1,0.393618331846834,0.3640776699029127,2.62,2.56,0.0234375,1.0,True,1.62,1.5876000000000001,selected,average_proxy
+,2019-07-01,Wimbledon,R128,Grass,Vasek Pospisil,Felix Auger Aliassime,player2,0.1031841308830986,0.0958408679927667,10.0,10.14,-0.013806706114398493,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-01,Wimbledon,R128,Grass,Thomas Fabbiano,Stefanos Tsitsipas,player1,0.1774283083934031,0.1458607095926412,6.5,6.98,-0.06876790830945567,1.0,True,5.5,5.39,selected,average_proxy
+,2019-07-01,Wimbledon,R128,Grass,Jozef Kovalik,Robin Haase,player1,0.24926905151627,0.2198198198198198,4.33,3.99,0.08521303258145352,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-01,Wimbledon,R128,Grass,Peter Gojowczyk,Roberto Bautista Agut,player1,0.0990068127246093,0.0871369294605809,11.0,9.92,0.1088709677419355,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-01,Wimbledon,R128,Grass,Jiri Vesely,Alexander Zverev,player1,0.4694335804964291,0.2198198198198198,4.33,4.37,-0.009153318077803174,1.0,True,3.33,3.2634,selected,average_proxy
+,2019-07-02,Wimbledon,R128,Grass,Sam Querrey,Dominic Thiem,player2,0.7709810620467528,0.411764705882353,2.3,2.23,0.03139013452914785,1.0,True,1.2999999999999998,1.274,selected,average_proxy
+,2019-07-02,Wimbledon,R128,Grass,Frances Tiafoe,Fabio Fognini,player2,0.5440941411235496,0.450261780104712,2.1,2.07,0.01449275362318847,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-02,Wimbledon,R128,Grass,Federico Delbonis,Daniel Evans,player2,0.1292356246747998,0.118942731277533,8.0,8.98,-0.10913140311804015,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-02,Wimbledon,R128,Grass,James Ward,Nikoloz Basilashvili,player1,0.4469821358184191,0.398477157360406,2.37,2.34,0.012820512820512997,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-02,Wimbledon,R128,Grass,Yuichi Sugita,Rafael Nadal,player2,0.0620448161953846,0.0566037735849056,17.0,13.52,0.2573964497041421,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-02,Wimbledon,R128,Grass,Thiago Monteiro,Kei Nishikori,player2,0.2203925499061616,0.0871369294605809,11.0,10.21,0.07737512242899114,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-02,Wimbledon,R128,Grass,Lloyd Harris,Roger Federer,player1,0.0725928107027394,0.0420658059142024,23.0,20.67,0.11272375423318803,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-03,Wimbledon,R64,Grass,Denis Kudla,Novak Djokovic,player2,0.0743628274794606,0.0373935579415031,26.0,22.28,0.16696588868940743,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-03,Wimbledon,R64,Grass,Steve Darcis,Roberto Bautista Agut,player2,0.0944801923509127,0.0871369294605809,11.0,10.98,0.0018214936247722413,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-04,Wimbledon,R64,Grass,Marton Fucsovics,Fabio Fognini,player2,0.4790988557731412,0.4300518134715025,2.2,2.13,0.032863849765258246,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-04,Wimbledon,R64,Grass,Nick Kyrgios,Rafael Nadal,player2,0.270952861447931,0.238095238095238,4.0,3.98,0.005025125628140614,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-05,Wimbledon,R32,Grass,Kevin Anderson,Guido Pella,player2,0.9294198363041668,0.8426966292134831,1.12,1.13,-0.008849557522123686,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-06,Wimbledon,R32,Grass,Tennys Sandgren,Fabio Fognini,player1,0.4142944832841684,0.2708333333333333,3.5,3.51,-0.002849002849002802,1.0,True,2.5,2.45,selected,average_proxy
+,2019-07-06,Wimbledon,R32,Grass,Jo-Wilfried Tsonga,Rafael Nadal,player2,0.2502227743616323,0.1883116883116883,5.0,5.12,-0.0234375,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-06,Wimbledon,R32,Grass,Steve Johnson,Kei Nishikori,player1,0.3116698457434841,0.2105263157894736,4.5,4.41,0.020408163265306145,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-08,Wimbledon,R16,Grass,Mikhail Kukushkin,Kei Nishikori,player1,0.2189135994528471,0.1573033707865168,6.0,6.91,-0.13169319826338644,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-14,Wimbledon,F,Grass,Novak Djokovic,Roger Federer,player2,0.6648962260715029,0.6265060240963857,1.55,1.54,0.006493506493506551,1.0,True,0.55,0.5390000000000001,selected,average_proxy
+,2019-07-17,Umag,R16,Clay,Paolo Lorenzi,Laslo Djere,player1,0.3237247552661222,0.25,3.75,4.07,-0.07862407862407872,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-24,Hamburg,R16,Clay,Marton Fucsovics,Dominic Thiem,player2,0.2546236662779172,0.1883116883116883,5.0,5.16,-0.03100775193798455,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-25,Hamburg,R16,Clay,Alexander Zverev,Federico Delbonis,player1,0.8135030060199194,0.7322175732217574,1.28,1.3,-0.015384615384615441,1.0,True,0.28,0.2744,selected,average_proxy
+,2019-07-26,Gstaad,QF,Clay,Joao Sousa,Roberto Bautista Agut,player1,0.2782598792344576,0.2544731610337972,3.75,3.83,-0.02088772845953002,1.0,True,2.75,2.695,selected,average_proxy
+,2019-07-26,Hamburg,QF,Clay,Alexander Zverev,Filip Krajinovic,player1,0.8475915962285117,0.7017543859649122,1.36,1.38,-0.014492753623188248,1.0,True,0.3600000000000001,0.3528000000000002,selected,average_proxy
+,2019-07-26,Hamburg,QF,Clay,Andrey Rublev,Dominic Thiem,player2,0.1826835745975614,0.1573033707865168,6.0,6.29,-0.04610492845786962,1.0,True,5.0,4.9,selected,average_proxy
+,2019-07-26,Atlanta,QF,Hard,Bernard Tomic,Alex De Minaur,player1,0.3243411407285286,0.2982456140350877,3.2,3.14,0.019108280254777066,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-27,Hamburg,SF,Clay,Alexander Zverev,Nikoloz Basilashvili,player1,0.7779972259647491,0.6563245823389022,1.44,1.41,0.02127659574468077,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-07-31,Kitzbuhel,R16,Clay,Dominic Thiem,Sebastian Ofner,player2,0.98,0.893743793445879,1.07,1.06,0.009433962264151052,1.0,True,0.07000000000000006,0.0686,selected,average_proxy
+,2019-08-01,Los Cabos,R16,Hard,Marcel Granollers,Fabio Fognini,player1,0.5216134173178166,0.4623655913978494,2.0,1.98,0.010101010101010166,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-02,Los Cabos,QF,Hard,Taylor Fritz,Fabio Fognini,player1,0.6556023494329484,0.5699481865284974,1.66,1.62,0.024691358024691246,1.0,True,0.6599999999999999,0.6467999999999998,selected,average_proxy
+,2019-08-02,Washington,R16,Hard,Stefanos Tsitsipas,Jordan Thompson,player1,0.7948675115448177,0.7188160676532769,1.33,1.31,0.01526717557251911,1.0,True,0.33000000000000007,0.32340000000000013,selected,average_proxy
+,2019-08-02,Washington,QF,Hard,Daniil Medvedev,Marin Cilic,player1,0.6968784513626443,0.588235294117647,1.61,1.57,0.02547770700636942,1.0,True,0.6100000000000001,0.5978000000000001,selected,average_proxy
+,2019-08-03,Washington,QF,Hard,Benoit Paire,Stefanos Tsitsipas,player1,0.3480296133347563,0.2708333333333333,3.5,3.49,0.002865329512893977,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-04,Washington,SF,Hard,Daniil Medvedev,Peter Gojowczyk,player1,0.9698990730990662,0.8116883116883117,1.16,1.16,0.0,1.0,True,0.15999999999999992,0.15679999999999983,selected,average_proxy
+,2019-08-04,Washington,F,Hard,Nick Kyrgios,Daniil Medvedev,player1,0.5281915228046143,0.450261780104712,2.1,2.13,-0.014084507042253391,1.0,True,1.1,1.0780000000000003,selected,average_proxy
+,2019-08-07,Canada Masters,R32,Hard,Denis Shapovalov,Dominic Thiem,player2,0.5830885906891574,0.4225721784776903,2.2,2.13,0.032863849765258246,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-07,Canada Masters,R32,Hard,Kei Nishikori,Richard Gasquet,player2,0.8079803580047191,0.6626506024096386,1.4,1.38,0.01449275362318847,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-07,Canada Masters,R32,Hard,Stefanos Tsitsipas,Hubert Hurkacz,player2,0.7759954433019679,0.6626506024096386,1.4,1.43,-0.020979020979021046,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-07,Canada Masters,R32,Hard,Rafael Nadal,Daniel Evans,player2,0.9654358810376744,0.8810572687224669,1.08,1.08,0.0,1.0,True,0.08000000000000007,0.07840000000000003,selected,average_proxy
+,2019-08-08,Canada Masters,R16,Hard,Marin Cilic,Dominic Thiem,player2,0.7007659392361765,0.5,1.9,1.93,-0.015544041450777257,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-08,Canada Masters,R16,Hard,Alexander Zverev,Nikoloz Basilashvili,player1,0.7790759795024108,0.6563245823389022,1.44,1.44,0.0,1.0,True,0.43999999999999995,0.4312,selected,average_proxy
+,2019-08-08,Canada Masters,R16,Hard,Karen Khachanov,Felix Auger Aliassime,player1,0.6788699840399632,0.549738219895288,1.72,1.69,0.01775147928994092,1.0,True,0.72,0.7056,selected,average_proxy
+,2019-08-09,Canada Masters,QF,Hard,Daniil Medvedev,Dominic Thiem,player1,0.6764023904964647,0.588235294117647,1.61,1.67,-0.0359281437125748,1.0,True,0.6100000000000001,0.5978000000000001,selected,average_proxy
+,2019-08-09,Canada Masters,QF,Hard,Alexander Zverev,Karen Khachanov,player1,0.7514756410419708,0.5263157894736842,1.8,1.77,0.016949152542372836,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-09,Canada Masters,QF,Hard,Fabio Fognini,Rafael Nadal,player2,0.2186423437141402,0.1573033707865168,6.0,6.22,-0.03536977491961413,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-10,Canada Masters,SF,Hard,Karen Khachanov,Daniil Medvedev,player1,0.4330395115553818,0.3640776699029127,2.62,2.62,0.0,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-11,Canada Masters,F,Hard,Daniil Medvedev,Rafael Nadal,player2,0.3824678368944234,0.3181818181818181,3.0,2.99,0.0033444816053511683,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-14,Cincinnati Masters,R32,Hard,Yoshihito Nishioka,Kei Nishikori,player1,0.3212844083282554,0.2765957446808511,3.4,3.34,0.017964071856287456,1.0,True,2.4,2.352,selected,average_proxy
+,2019-08-14,Cincinnati Masters,R32,Hard,Benoit Paire,Daniil Medvedev,player1,0.3950475817736842,0.2765957446808511,3.4,3.6,-0.05555555555555558,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-15,Cincinnati Masters,R16,Hard,Daniil Medvedev,Jan Lennard Struff,player1,0.749539170376996,0.6818181818181818,1.4,1.38,0.01449275362318847,1.0,True,0.3999999999999999,0.3919999999999999,selected,average_proxy
+,2019-08-17,Cincinnati Masters,SF,Hard,Daniil Medvedev,Novak Djokovic,player1,0.4002717590850569,0.281183932346723,3.4,3.39,0.002949852507374562,1.0,True,2.4,2.352,selected,average_proxy
+,2019-08-20,Winston-Salem,R32,Hard,Marco Cecchinato,John Millman,player1,0.3582908869398072,0.3119266055045871,3.0,2.92,0.027397260273972712,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-22,Winston-Salem,R16,Hard,Frances Tiafoe,Filip Krajinovic,player1,0.5790729815968112,0.5263157894736842,1.8,1.78,0.011235955056179803,1.0,True,0.8,0.784,selected,average_proxy
+,2019-08-26,US Open,R128,Hard,Prajnesh Gunneswaran,Daniil Medvedev,player2,0.2052036185569503,0.0509490509490509,19.0,20.19,-0.05894006934125806,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-26,US Open,R128,Hard,Thiago Monteiro,Bradley Klahn,player1,0.45714546018124,0.398477157360406,2.37,2.32,0.02155172413793105,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-27,US Open,R128,Hard,Andrey Rublev,Stefanos Tsitsipas,player1,0.5107095382851607,0.3796526054590571,2.5,2.59,-0.03474903474903468,1.0,True,1.5,1.4699999999999998,selected,average_proxy
+,2019-08-27,US Open,R128,Hard,Mikhail Kukushkin,Roberto Bautista Agut,player1,0.1595420481899488,0.118942731277533,8.0,7.88,0.015228426395939021,1.0,True,7.0,6.859999999999999,selected,average_proxy
+,2019-08-27,US Open,R128,Hard,Pablo Andujar,Kyle Edmund,player1,0.2367620235542683,0.2105263157894736,4.5,4.64,-0.030172413793103425,1.0,True,3.5,3.4299999999999997,selected,average_proxy
+,2019-08-27,US Open,R128,Hard,Alexander Zverev,Radu Albot,player2,0.8510789394140426,0.6563245823389022,1.44,1.44,0.0,1.0,True,0.43999999999999995,0.4312,selected,average_proxy
+,2019-08-27,US Open,R128,Hard,Vasek Pospisil,Karen Khachanov,player1,0.3662217692469584,0.1573033707865168,6.0,7.19,-0.16550764951321284,1.0,True,5.0,4.9,selected,average_proxy
+,2019-08-29,US Open,R64,Hard,Hugo Dellien,Daniil Medvedev,player1,0.1808996469713124,0.0509490509490509,19.0,14.3,0.32867132867132853,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-29,US Open,R64,Hard,Alexander Zverev,Frances Tiafoe,player2,0.7226912975467443,0.6359223300970874,1.5,1.52,-0.013157894736842146,1.0,True,0.5,0.49,selected,average_proxy
+,2019-08-31,US Open,R32,Hard,Feliciano Lopez,Daniil Medvedev,player1,0.4394899383019277,0.2708333333333333,3.5,3.59,-0.02506963788300831,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-08-31,US Open,R32,Hard,Aljaz Bedene,Alexander Zverev,player1,0.4421852333909208,0.2544731610337972,3.75,3.87,-0.03100775193798455,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-09-01,US Open,R16,Hard,Roger Federer,David Goffin,player1,0.9794461164210454,0.8116883116883117,1.16,1.16,0.0,1.0,True,0.15999999999999992,0.15679999999999983,selected,average_proxy
+,2019-09-02,US Open,R16,Hard,Diego Schwartzman,Alexander Zverev,player2,0.5397860795786423,0.4736842105263157,2.0,1.99,0.005025125628140614,1.0,True,1.0,0.98,selected,average_proxy
+,2019-09-03,US Open,R16,Hard,Marin Cilic,Rafael Nadal,player1,0.1391088051990061,0.1062562065541211,9.0,8.79,0.023890784982935287,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-09-03,US Open,QF,Hard,Stan Wawrinka,Daniil Medvedev,player1,0.7064422339651805,0.549738219895288,1.72,1.81,-0.04972375690607744,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-09-04,US Open,QF,Hard,Grigor Dimitrov,Roger Federer,player2,0.126102546585458,0.1062562065541211,9.0,9.44,-0.04661016949152541,1.0,True,8.0,7.84,selected,average_proxy
+,2019-09-07,US Open,SF,Hard,Rafael Nadal,Matteo Berrettini,player2,0.9752213670419708,0.9041591320072332,1.06,1.06,0.0,1.0,True,0.06000000000000005,0.05879999999999996,selected,average_proxy
+,2019-09-19,St. Petersburg,R16,Hard,Joao Sousa,Karen Khachanov,player1,0.515798105682987,0.3119266055045871,3.0,3.03,-0.009900990099009799,1.0,True,2.0,1.96,selected,average_proxy
+,2019-09-20,St. Petersburg,QF,Hard,Andrey Rublev,Daniil Medvedev,player2,0.2664070783848552,0.238095238095238,4.0,4.01,-0.0024937655860348684,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-09-21,St. Petersburg,SF,Hard,Egor Gerasimov,Daniil Medvedev,player2,0.221651161897567,0.1716867469879518,5.5,5.61,-0.019607843137254943,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-09-22,St. Petersburg,F,Hard,Borna Coric,Daniil Medvedev,player1,0.3850995004721148,0.2198198198198198,4.33,4.54,-0.04625550660792954,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-09-26,Zhuhai,R16,Hard,Andy Murray,Alex De Minaur,player2,0.3482928210383229,0.3119266055045871,3.0,3.03,-0.009900990099009799,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-09-26,Zhuhai,R16,Hard,Adrian Mannarino,Stefanos Tsitsipas,player1,0.3778530832176817,0.2677824267782427,3.5,3.42,0.023391812865497075,1.0,True,2.5,2.45,selected,average_proxy
+,2019-09-30,Beijing,R32,Hard,Frances Tiafoe,Alexander Zverev,player2,0.529455577583688,0.3373493975903614,2.75,2.9,-0.051724137931034475,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-09-30,Beijing,R32,Hard,Pablo Cuevas,Karen Khachanov,player1,0.4375338133290619,0.375,2.5,2.55,-0.019607843137254832,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-01,Beijing,R32,Hard,Sam Querrey,Roberto Bautista Agut,player1,0.3744772811143826,0.2765957446808511,3.4,3.58,-0.05027932960893855,1.0,True,2.4,2.352,selected,average_proxy
+,2019-10-01,Beijing,R32,Hard,Stefanos Tsitsipas,Dusan Lajovic,player1,0.8135762158587396,0.7322175732217574,1.28,1.27,0.007874015748031482,1.0,True,0.28,0.2744,selected,average_proxy
+,2019-10-02,Tokyo,R16,Hard,Go Soeda,Novak Djokovic,player2,0.087970602200236,0.074074074074074,13.0,13.19,-0.014404852160727732,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-03,Beijing,R16,Hard,Alexander Zverev,Felix Auger Aliassime,player1,0.8949855789123667,0.6880733944954128,1.36,1.4,-0.02857142857142847,1.0,True,0.3600000000000001,0.3528000000000002,selected,average_proxy
+,2019-10-03,Beijing,R16,Hard,Stefanos Tsitsipas,Nikoloz Basilashvili,player1,0.7553940224270065,0.6076923076923076,1.53,1.5,0.020000000000000018,1.0,True,0.53,0.5194000000000001,selected,average_proxy
+,2019-10-04,Beijing,QF,Hard,Alexander Zverev,Sam Querrey,player1,0.7877574197306859,0.7188160676532769,1.33,1.31,0.01526717557251911,1.0,True,0.33000000000000007,0.32340000000000013,selected,average_proxy
+,2019-10-04,Beijing,QF,Hard,Stefanos Tsitsipas,John Isner,player1,0.5735768233059104,0.5263157894736842,1.8,1.78,0.011235955056179803,1.0,True,0.8,0.784,selected,average_proxy
+,2019-10-04,Beijing,QF,Hard,Karen Khachanov,Fabio Fognini,player1,0.7383991029540156,0.588235294117647,1.61,1.57,0.02547770700636942,1.0,True,0.6100000000000001,0.5978000000000001,selected,average_proxy
+,2019-10-05,Beijing,SF,Hard,Alexander Zverev,Stefanos Tsitsipas,player1,0.7767815309863053,0.5699481865284974,1.66,1.7,-0.02352941176470591,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-06,Tokyo,F,Hard,John Millman,Novak Djokovic,player2,0.1010731607036835,0.0871369294605809,11.0,11.69,-0.05902480752780148,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-06,Beijing,F,Hard,Stefanos Tsitsipas,Dominic Thiem,player1,0.6773483973929093,0.5,1.9,1.95,-0.02564102564102566,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-08,Shanghai Masters,R32,Hard,Cameron Norrie,Daniil Medvedev,player1,0.1821598136870657,0.1573033707865168,6.0,6.18,-0.029126213592232997,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-09,Shanghai Masters,R32,Hard,Jeremy Chardy,Alexander Zverev,player1,0.3298639965237533,0.2677824267782427,3.5,3.87,-0.09560723514211888,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-09,Shanghai Masters,R32,Hard,Dominic Thiem,Pablo Carreno Busta,player2,0.7610314419696355,0.6626506024096386,1.4,1.43,-0.020979020979021046,1.0,True,0.3999999999999999,0.3919999999999999,selected,average_proxy
+,2019-10-09,Shanghai Masters,R32,Hard,Taylor Fritz,Karen Khachanov,player1,0.457376368581263,0.3373493975903614,2.75,2.65,0.037735849056603765,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-09,Shanghai Masters,R32,Hard,Stefanos Tsitsipas,Felix Auger Aliassime,player1,0.8133323375451672,0.6626506024096386,1.4,1.41,-0.007092198581560294,1.0,True,0.3999999999999999,0.3919999999999999,selected,average_proxy
+,2019-10-09,Shanghai Masters,R32,Hard,Novak Djokovic,Denis Shapovalov,player1,0.978626553346334,0.8641975308641975,1.1,1.08,0.0185185185185186,1.0,True,0.10000000000000009,0.09800000000000009,selected,average_proxy
+,2019-10-10,Shanghai Masters,R16,Hard,Andrey Rublev,Alexander Zverev,player1,0.5831544576080369,0.398477157360406,2.37,2.41,-0.016597510373444035,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-10,Shanghai Masters,R16,Hard,Matteo Berrettini,Roberto Bautista Agut,player1,0.6854820248904543,0.549738219895288,1.72,1.71,0.005847953216374213,1.0,True,0.72,0.7056,selected,average_proxy
+,2019-10-10,Shanghai Masters,R16,Hard,Karen Khachanov,Fabio Fognini,player2,0.7312917798796992,0.6563245823389022,1.44,1.43,0.006993006993007089,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-10,Shanghai Masters,R16,Hard,Vasek Pospisil,Daniil Medvedev,player1,0.2395324124682794,0.118942731277533,8.0,7.91,0.011378002528444897,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-10,Shanghai Masters,R16,Hard,Stefanos Tsitsipas,Hubert Hurkacz,player2,0.7398602857852181,0.6818181818181818,1.4,1.38,0.01449275362318847,1.0,True,0.3999999999999999,0.3919999999999999,selected,average_proxy
+,2019-10-11,Shanghai Masters,QF,Hard,Fabio Fognini,Daniil Medvedev,player1,0.287654323210395,0.2198198198198198,4.33,4.42,-0.020361990950226172,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-11,Shanghai Masters,QF,Hard,Novak Djokovic,Stefanos Tsitsipas,player1,0.9154677660983942,0.8283132530120482,1.14,1.11,0.02702702702702675,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-13,Shanghai Masters,F,Hard,Daniil Medvedev,Alexander Zverev,player1,0.7950203859583409,0.6203473945409429,1.53,1.54,-0.006493506493506551,1.0,True,0.53,0.5194000000000001,selected,average_proxy
+,2019-10-18,Moscow,QF,Hard,Andreas Seppi,Karen Khachanov,player2,0.2847693657806182,0.2544731610337972,3.75,3.6,0.04166666666666674,1.0,True,2.75,2.695,selected,average_proxy
+,2019-10-21,Basel,R32,Hard,Hugo Dellien,Alex De Minaur,player1,0.1367516118619786,0.118942731277533,8.0,8.31,-0.03730445246690739,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-21,Vienna,R32,Hard,Hubert Hurkacz,Karen Khachanov,player1,0.502362788785251,0.4225721784776903,2.2,2.4,-0.08333333333333326,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-22,Basel,R32,Hard,Taylor Fritz,Alexander Zverev,player1,0.4691336492054341,0.2337164750957854,4.0,4.03,-0.007444168734491385,1.0,True,3.0,2.94,selected,average_proxy
+,2019-10-22,Basel,R32,Hard,Marius Copil,Roberto Bautista Agut,player1,0.4114842811771885,0.2903930131004367,3.25,3.61,-0.09972299168975063,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-23,Vienna,R32,Hard,Adrian Mannarino,Sam Querrey,player1,0.4769128132408368,0.4225721784776903,2.2,2.23,-0.013452914798206206,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-23,Vienna,R16,Hard,Marton Fucsovics,Karen Khachanov,player1,0.4015132413521338,0.3119266055045871,3.0,2.96,0.013513513513513598,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-24,Basel,R16,Hard,Richard Gasquet,Roberto Bautista Agut,player1,0.3333210396251347,0.2903930131004367,3.25,3.04,0.06907894736842102,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-24,Basel,R16,Hard,Ricardas Berankis,Stefanos Tsitsipas,player1,0.2677070341462574,0.2169981916817359,4.33,5.04,-0.14087301587301582,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-24,Basel,R16,Hard,Frances Tiafoe,Stan Wawrinka,player2,0.3264923399297105,0.2903930131004367,3.25,3.52,-0.07670454545454541,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-24,Vienna,R16,Hard,Fernando Verdasco,Dominic Thiem,player2,0.3401864966490082,0.2337164750957854,4.0,3.97,0.007556675062972307,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-25,Basel,QF,Hard,Roberto Bautista Agut,Reilly Opelka,player1,0.8425689556435927,0.6359223300970874,1.5,1.46,0.027397260273972712,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-25,Basel,QF,Hard,Roger Federer,Stan Wawrinka,player1,0.866583176724343,0.7894736842105263,1.2,1.18,0.016949152542372836,1.0,True,0.19999999999999996,0.19599999999999995,selected,average_proxy
+,2019-10-25,Vienna,QF,Hard,Karen Khachanov,Diego Schwartzman,player2,0.6972931288853603,0.6015228426395939,1.57,1.6,-0.018750000000000044,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-26,Basel,SF,Hard,Roger Federer,Stefanos Tsitsipas,player1,0.891483987540644,0.7455268389662029,1.28,1.28,0.0,1.0,True,0.28,0.2744,selected,average_proxy
+,2019-10-26,Vienna,SF,Hard,Dominic Thiem,Matteo Berrettini,player1,0.7905513420815987,0.588235294117647,1.61,1.62,-0.006172839506172867,1.0,True,0.6100000000000001,0.5978000000000001,selected,average_proxy
+,2019-10-27,Vienna,F,Hard,Dominic Thiem,Diego Schwartzman,player2,0.8272377020247093,0.7455268389662029,1.28,1.29,-0.007751937984496138,1.0,True,0.28,0.2744,selected,average_proxy
+,2019-10-29,Paris Masters,R32,Hard,Jan Lennard Struff,Karen Khachanov,player1,0.4753500242113906,0.375,2.5,2.46,0.016260162601626105,1.0,True,1.5,1.4699999999999998,selected,average_proxy
+,2019-10-29,Paris Masters,R32,Hard,Jeremy Chardy,Daniil Medvedev,player1,0.228395275674367,0.1716867469879518,5.5,5.5,0.0,1.0,True,4.5,4.41,selected,average_proxy
+,2019-10-30,Paris Masters,R32,Hard,Jo-Wilfried Tsonga,Matteo Berrettini,player1,0.6112989691299731,0.4109947643979057,2.25,2.4,-0.0625,1.0,True,1.25,1.225,selected,average_proxy
+,2019-10-30,Paris Masters,R32,Hard,Milos Raonic,Dominic Thiem,player2,0.4392302985388732,0.3923076923076922,2.37,2.47,-0.04048582995951422,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-30,Paris Masters,R32,Hard,Taylor Fritz,Stefanos Tsitsipas,player1,0.5324818208036589,0.2677824267782427,3.5,3.63,-0.03581267217630846,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-31,Paris Masters,R16,Hard,Stan Wawrinka,Rafael Nadal,player2,0.3793567903048542,0.238095238095238,4.0,4.13,-0.03147699757869249,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-31,Paris Masters,R16,Hard,Radu Albot,Gael Monfils,player2,0.2732159680884248,0.238095238095238,4.0,3.98,0.005025125628140614,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-31,Paris Masters,R16,Hard,Denis Shapovalov,Alexander Zverev,player1,0.5081223887133854,0.3436754176610979,2.75,2.91,-0.054982817869415834,1.0,True,1.75,1.7149999999999999,selected,average_proxy
+,2019-10-31,Paris Masters,R16,Hard,Alex De Minaur,Stefanos Tsitsipas,player1,0.487712360685144,0.398477157360406,2.37,2.34,0.012820512820512997,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-10-31,Paris Masters,R16,Hard,Kyle Edmund,Novak Djokovic,player1,0.1774517606078101,0.1358024691358024,7.0,8.23,-0.14945321992709604,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-11-01,Paris Masters,QF,Hard,Jo-Wilfried Tsonga,Rafael Nadal,player2,0.2476818336157119,0.1883116883116883,5.0,5.47,-0.08592321755027421,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-11-02,Paris Masters,SF,Hard,Denis Shapovalov,Rafael Nadal,player1,0.3305389438710883,0.1883116883116883,5.0,4.94,0.012145748987854255,1.0,True,4.0,3.92,selected,average_proxy
+,2019-11-02,Paris Masters,SF,Hard,Novak Djokovic,Grigor Dimitrov,player1,0.941713030905967,0.8426966292134831,1.12,1.1,0.0181818181818183,1.0,True,0.1200000000000001,0.11760000000000015,selected,average_proxy
+,2019-11-03,Paris Masters,F,Hard,Denis Shapovalov,Novak Djokovic,player2,0.1867669788924102,0.1573033707865168,6.0,5.98,0.0033444816053511683,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-11-11,Tour Finals,RR,Hard,Stefanos Tsitsipas,Daniil Medvedev,player1,0.3745824183174774,0.3181818181818181,3.0,3.03,-0.009900990099009799,1.0,True,2.0,1.96,selected,average_proxy
+,2019-11-13,Tour Finals,RR,Hard,Stefanos Tsitsipas,Alexander Zverev,player1,0.5576151039636432,0.4736842105263157,2.0,2.09,-0.04306220095693769,1.0,True,1.0,0.98,selected,average_proxy
+,2019-11-13,Tour Finals,RR,Hard,Daniil Medvedev,Rafael Nadal,player1,0.6301432169714838,0.549738219895288,1.72,1.71,0.005847953216374213,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-11-14,Tour Finals,RR,Hard,Dominic Thiem,Matteo Berrettini,player1,0.8247935662680239,0.7017543859649122,1.36,1.36,0.0,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-11-14,Tour Finals,RR,Hard,Novak Djokovic,Roger Federer,player2,0.7966447935498379,0.7017543859649122,1.36,1.37,-0.007299270072992692,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-11-15,Tour Finals,RR,Hard,Alexander Zverev,Daniil Medvedev,player1,0.7262329437037782,0.5,1.9,1.92,-0.01041666666666663,1.0,True,0.8999999999999999,0.8819999999999999,selected,average_proxy
+,2019-11-15,Tour Finals,RR,Hard,Stefanos Tsitsipas,Rafael Nadal,player1,0.4319282605203663,0.3436754176610979,2.75,2.93,-0.061433447098976135,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-11-16,Tour Finals,SF,Hard,Alexander Zverev,Dominic Thiem,player1,0.6016492944709725,0.4736842105263157,2.0,2.06,-0.029126213592232997,1.0,False,-1.0,-1.0,selected,average_proxy
+,2019-11-17,Tour Finals,F,Hard,Stefanos Tsitsipas,Dominic Thiem,player1,0.6043752803714844,0.4736842105263157,2.0,1.96,0.020408163265306145,1.0,True,1.0,0.98,selected,average_proxy

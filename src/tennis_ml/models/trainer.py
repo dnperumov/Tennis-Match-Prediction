@@ -12,9 +12,13 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, log_loss, brier_score_loss
 from sklearn.impute import SimpleImputer
-import xgboost as xgb
 import joblib
 import os
+
+try:
+    import xgboost as xgb
+except ImportError:
+    xgb = None
 
 
 class ModelTrainer:
@@ -67,13 +71,21 @@ class ModelTrainer:
             random_state=42
         )
         
-        xgb_model = xgb.XGBClassifier(
-            n_estimators=150,
-            max_depth=6,
-            learning_rate=0.1,
-            random_state=42,
-            eval_metric='logloss'
-        )
+        if xgb is not None:
+            gradient_boosting_model = xgb.XGBClassifier(
+                n_estimators=150,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=42,
+                eval_metric='logloss'
+            )
+        else:
+            gradient_boosting_model = HistGradientBoostingClassifier(
+                max_iter=150,
+                max_leaf_nodes=31,
+                learning_rate=0.1,
+                random_state=42
+            )
         
         lr_model = LogisticRegression(
             max_iter=1000,
@@ -84,7 +96,7 @@ class ModelTrainer:
         ensemble = VotingClassifier(
             estimators=[
                 ('rf', rf_model),
-                ('xgb', xgb_model),
+                ('gb', gradient_boosting_model),
                 ('lr', lr_model)
             ],
             voting='soft'
@@ -113,6 +125,12 @@ class ModelTrainer:
             
             y_pred = model.predict(X_val_scaled)
             y_pred_proba = model.predict_proba(X_val_scaled)
+            class_probabilities = pd.DataFrame(
+                y_pred_proba,
+                columns=model.classes_,
+                index=y_val.index
+            )
+            player1_win_probability = class_probabilities[1]
             
             metrics = {
                 'accuracy': accuracy_score(y_val, y_pred),
@@ -120,7 +138,7 @@ class ModelTrainer:
                 'recall': recall_score(y_val, y_pred, average='weighted'),
                 'f1_score': f1_score(y_val, y_pred, average='weighted'),
                 'log_loss': log_loss(y_val, y_pred_proba),
-                'brier_score': brier_score_loss(y_val, y_pred_proba[:, 1])
+                'brier_score': brier_score_loss(y_val == 1, player1_win_probability)
             }
         
         # Store components
@@ -138,7 +156,8 @@ class ModelTrainer:
     
     def train_separate_models(self, X_train: pd.DataFrame, y_train: pd.Series,
                              top_10_mask: pd.Series, X_val: pd.DataFrame = None,
-                             y_val: pd.Series = None) -> Dict[str, Any]:
+                             y_val: pd.Series = None,
+                             top_10_val_mask: pd.Series = None) -> Dict[str, Any]:
         """
         Train separate models for top 10 players vs others.
         
@@ -148,6 +167,7 @@ class ModelTrainer:
             top_10_mask: Boolean mask for top 10 players
             X_val: Validation features
             y_val: Validation labels
+            top_10_val_mask: Boolean mask for top 10 players in validation data
             
         Returns:
             Dictionary with trained models and metrics
@@ -157,19 +177,20 @@ class ModelTrainer:
         other_data = X_train[~top_10_mask]
         top_10_labels = y_train[top_10_mask]
         other_labels = y_train[~top_10_mask]
+        top_10_val_mask = top_10_val_mask if top_10_val_mask is not None else top_10_mask
         
         # Train top 10 model
         top_10_result = self.train_ensemble_model(
             top_10_data, top_10_labels,
-            X_val[top_10_mask] if X_val is not None else None,
-            y_val[top_10_mask] if y_val is not None else None
+            X_val[top_10_val_mask] if X_val is not None else None,
+            y_val[top_10_val_mask] if y_val is not None else None
         )
         
         # Train other model
         other_result = self.train_ensemble_model(
             other_data, other_labels,
-            X_val[~top_10_mask] if X_val is not None else None,
-            y_val[~top_10_mask] if y_val is not None else None
+            X_val[~top_10_val_mask] if X_val is not None else None,
+            y_val[~top_10_val_mask] if y_val is not None else None
         )
         
         self.models['top_10'] = top_10_result['model']
@@ -218,4 +239,3 @@ class ModelTrainer:
             result['imputer'] = joblib.load(imputer_path)
         
         return result
-

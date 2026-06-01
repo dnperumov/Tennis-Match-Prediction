@@ -1,0 +1,2 @@
+bets,wins,win_rate,staked,profit,roi,max_drawdown,average_odds,average_model_probability,average_edge,average_clv,clv_positive_rate,edge_threshold,model_type,max_odds,exclude_slams,surface,test_year
+60,30,0.5,60.0,-0.3299999999999985,-0.005499999999999975,-8.209999999999999,2.452833333333333,0.5707947453232152,0.10677361524729413,-0.0711695725739386,0.0,0.075,,5.0,False,,2020

@@ -1,0 +1,2 @@
+bets,wins,win_rate,staked,profit,roi,max_drawdown,average_odds,average_model_probability,average_edge,model_type
+886,556,0.6275395033860045,886.0,95.06,0.10729119638826186,-15.289999999999992,2.0161512415349887,0.6739214208853044,0.12150978774615268,top_10

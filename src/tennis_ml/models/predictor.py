@@ -58,13 +58,16 @@ class MatchPredictor:
         # Make prediction
         prediction = self.model.predict(feature_vector_scaled)[0]
         probabilities = self.model.predict_proba(feature_vector_scaled)[0]
+        class_probabilities = dict(zip(self.model.classes_, probabilities))
+        player1_probability = class_probabilities.get(1, 0.0)
+        player2_probability = class_probabilities.get(2, 1 - player1_probability)
         
         return {
             'prediction': prediction,
             'probabilities': probabilities,
-            'player1_probability': probabilities[1] if len(probabilities) > 1 else probabilities[0],
-            'player2_probability': probabilities[0] if len(probabilities) > 1 else 1 - probabilities[0],
-            'confidence': abs(probabilities[1] - 0.5) * 2 if len(probabilities) > 1 else 0,
+            'player1_probability': player1_probability,
+            'player2_probability': player2_probability,
+            'confidence': abs(player1_probability - 0.5) * 2,
             'player1_name': player1_name,
             'player2_name': player2_name,
             'surface': surface
@@ -174,4 +177,3 @@ class MatchPredictor:
             feature_vector.append(0)
         
         return feature_vector[:len(self.features)]
-

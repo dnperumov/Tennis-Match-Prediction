@@ -2,6 +2,9 @@
 Player class for tracking player statistics over time.
 """
 
+import math
+import pandas as pd
+
 
 class Player:
     """Tracks comprehensive player statistics for match prediction."""
@@ -28,8 +31,32 @@ class Player:
         self.loss_streak = 0
         self.tourney_performance = {}
         self.surface_performance = {'Hard': [], 'Clay': [], 'Grass': [], 'Carpet': [], 'Unknown': []}
+        self.match_dates = []
+        self.match_minutes = []
+        self.serve_points_won = []
+        self.return_points_won = []
+        self.ace_rates = []
+        self.double_fault_rates = []
 
-    def update_stats(self, opponent, opponent_hand, is_winner, surface, rank, height, hand, seed, age, tourney_id):
+    def update_stats(
+        self,
+        opponent,
+        opponent_hand,
+        is_winner,
+        surface,
+        rank,
+        height,
+        hand,
+        seed,
+        age,
+        tourney_id,
+        match_date=None,
+        minutes=None,
+        serve_points_won_pct=None,
+        return_points_won_pct=None,
+        ace_rate=None,
+        double_fault_rate=None,
+    ):
         """Update player statistics after a match."""
         self.total_matches += 1
         self.ranks.append(rank)
@@ -37,6 +64,15 @@ class Player:
         self.hands.append(hand)
         self.seeds.append(seed)
         self.ages.append(age)
+        parsed_date = pd.to_datetime(match_date, errors='coerce')
+        if pd.notna(parsed_date):
+            self.match_dates.append(parsed_date)
+        if pd.notna(minutes):
+            self.match_minutes.append(float(minutes))
+        self._append_bounded(self.serve_points_won, serve_points_won_pct, 20)
+        self._append_bounded(self.return_points_won, return_points_won_pct, 20)
+        self._append_bounded(self.ace_rates, ace_rate, 20)
+        self._append_bounded(self.double_fault_rates, double_fault_rate, 20)
 
         self.last_5_matches.append(is_winner)
         if len(self.last_5_matches) > 5:
@@ -79,28 +115,32 @@ class Player:
         if is_winner:
             self.tourney_performance[tourney_id]['wins'] += 1
 
-    def win_percentage(self, surface):
-        """Calculate win percentage on a specific surface."""
-        if self.surface_matches[surface] == 0:
-            return 0
-        return self.surface_wins[surface] / self.surface_matches[surface]
+    def win_percentage(self, surface, prior: float = 0.5, prior_matches: int = 5):
+        """Calculate shrinkage-adjusted win percentage on a specific surface."""
+        if surface not in self.surface_matches or self.surface_matches[surface] == 0:
+            return prior
+        return (
+            self.surface_wins[surface] + prior * prior_matches
+        ) / (
+            self.surface_matches[surface] + prior_matches
+        )
 
     def overall_win_percentage(self):
         """Calculate overall win percentage."""
         if self.total_matches == 0:
-            return 0
+            return 0.5
         return self.total_wins / self.total_matches
 
     def last_5_win_percentage(self):
         """Calculate win percentage in last 5 matches."""
         if len(self.last_5_matches) == 0:
-            return 0
+            return 0.5
         return sum(self.last_5_matches) / len(self.last_5_matches)
 
     def last_10_win_percentage(self):
         """Calculate win percentage in last 10 matches."""
         if len(self.last_10_matches) == 0:
-            return 0
+            return 0.5
         return sum(self.last_10_matches) / len(self.last_10_matches)
 
     def surface_last_10_win_percentage(self, surface):
@@ -110,9 +150,9 @@ class Player:
             surface = surface_mapping.get(surface, 'Unknown')
 
         if surface not in self.surface_performance:
-            return 0
+            return 0.5
         if len(self.surface_performance[surface]) == 0:
-            return 0
+            return 0.5
         return sum(self.surface_performance[surface]) / len(self.surface_performance[surface])
 
     def head_to_head_stats(self, opponent):
@@ -147,6 +187,58 @@ class Player:
 
     def preferred_surface(self):
         """Determine player's preferred surface."""
+        if sum(self.surface_matches.values()) == 0:
+            return 'Unknown'
         best_surface = max(self.surface_wins, key=lambda x: self.win_percentage(x))
         return best_surface
 
+    def days_since_last_match(self, current_date, default: float = 365.0):
+        """Days since last known match before current_date."""
+        if not self.match_dates:
+            return default
+        current = pd.to_datetime(current_date, errors='coerce')
+        if pd.isna(current):
+            return default
+        delta = (current - self.match_dates[-1]).days
+        if delta < 0:
+            return default
+        return min(float(delta), default)
+
+    def matches_last_days(self, current_date, days: int):
+        """Count prior matches played within a rolling calendar window."""
+        current = pd.to_datetime(current_date, errors='coerce')
+        if pd.isna(current):
+            return 0
+        return sum(0 <= (current - match_date).days <= days for match_date in self.match_dates)
+
+    def avg_minutes(self, n: int = 3, default: float = 90.0):
+        values = self.match_minutes[-n:]
+        if not values:
+            return default
+        return sum(values) / len(values)
+
+    def rolling_average(self, values, n: int = 10, default: float = 0.5):
+        recent = [value for value in values[-n:] if pd.notna(value)]
+        if not recent:
+            return default
+        return sum(recent) / len(recent)
+
+    def recent_serve_points_won(self):
+        return self.rolling_average(self.serve_points_won)
+
+    def recent_return_points_won(self):
+        return self.rolling_average(self.return_points_won)
+
+    def recent_ace_rate(self):
+        return self.rolling_average(self.ace_rates, default=0.05)
+
+    def recent_double_fault_rate(self):
+        return self.rolling_average(self.double_fault_rates, default=0.03)
+
+    @staticmethod
+    def _append_bounded(values, value, limit: int):
+        if value is None or pd.isna(value) or not math.isfinite(float(value)):
+            return
+        values.append(float(value))
+        if len(values) > limit:
+            values.pop(0)

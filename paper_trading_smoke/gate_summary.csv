@@ -1,0 +1,8 @@
+gate,passed,value,threshold,comparison
+minimum_bets,True,305.0,300.0,>
+friction_adjusted_roi,False,-0.09094885245901643,0.0,>
+average_clv,False,-0.0016694071597286324,0.0,>
+positive_clv_rate,False,0.42950819672131146,0.52,>
+single_year_profit_share,False,1.0,0.5,<=
+calibration_ece,True,0.0,0.02,<=
+overall,False,0.0,1.0,all

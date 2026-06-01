@@ -41,9 +41,11 @@ tennis_env_39/
 
 # Models and data
 models/*.pkl
+models/daily/
 *.pkl
 data/raw/
-tennis_datav2/
+data/live/
+# tennis_datav2/  # Uncommented to track historical ATP match data
 
 # OS
 .DS_Store
@@ -51,4 +53,3 @@ Thumbs.db
 
 # Logs
 *.log
-

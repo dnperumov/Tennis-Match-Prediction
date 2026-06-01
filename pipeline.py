@@ -14,16 +14,16 @@ import sys
 import os
 import argparse
 from pathlib import Path
+import pandas as pd
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 from tennis_ml.data import DataLoader
-from tennis_ml.features import FeatureEngineer, BettingFeatureEngineer
+from tennis_ml.backtesting import OddsLoader
+from tennis_ml.features import FeatureEngineer, BettingFeatureEngineer, EloTracker
+from tennis_ml.features.columns import FEATURE_COLUMNS
 from tennis_ml.models import ModelTrainer
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
 
 
 def main():
@@ -32,12 +32,14 @@ def main():
                        help='Directory containing ATP match data')
     parser.add_argument('--model-dir', type=str, default='models',
                        help='Directory to save trained models')
-    parser.add_argument('--years', type=int, nargs=2, default=[2000, 2025],
-                       help='Year range for data (start end)')
+    parser.add_argument('--years', type=int, nargs=2, default=[2000, 2027],
+                       help='Year range for data (start end-exclusive)')
     parser.add_argument('--train', action='store_true',
                        help='Train new models')
     parser.add_argument('--predict', nargs=4, metavar=('PLAYER1', 'PLAYER2', 'SURFACE', 'TOURNAMENT'),
                        help='Make a prediction: player1 player2 surface tournament_importance')
+    parser.add_argument('--odds-file', nargs='+',
+                       help='Optional odds files for market-aware training features')
     
     args = parser.parse_args()
     
@@ -45,6 +47,7 @@ def main():
     data_loader = DataLoader(data_dir=args.data_dir)
     feature_engineer = FeatureEngineer()
     betting_feature_engineer = BettingFeatureEngineer()
+    elo_tracker = EloTracker()
     trainer = ModelTrainer(model_dir=args.model_dir)
     
     if args.train:
@@ -56,6 +59,16 @@ def main():
         print("\n[1/5] Loading data...")
         years = range(args.years[0], args.years[1])
         atp_matches = data_loader.load_data(years=years)
+        if args.odds_file:
+            odds_loader = OddsLoader()
+            odds = pd.concat(
+                [odds_loader.load(path) for path in args.odds_file],
+                ignore_index=True
+            )
+            atp_matches = odds_loader.align_match_dates(atp_matches, odds)
+        else:
+            odds_loader = None
+            odds = None
         print(f"Loaded {len(atp_matches)} matches from {args.years[0]}-{args.years[1]-1}")
         
         # Step 2: Split data chronologically
@@ -68,75 +81,70 @@ def main():
         # Step 3: Initialize player statistics
         print("\n[3/5] Initializing player statistics...")
         data_loader.initialize_players(initial_50)
+        elo_tracker.initialize(initial_50)
         print(f"Initialized {len(data_loader.players)} players")
         
         # Step 4: Feature engineering
         print("\n[4/5] Engineering features...")
         
-        # Create player vs player datasets
-        next_25_pvp = feature_engineer.create_player_vs_player_dataset(next_25)
-        final_25_pvp = feature_engineer.create_player_vs_player_dataset(final_25)
-        
-        # Update players with next_25 data
-        data_loader.update_players_incremental(next_25)
-        
-        # Create features
-        next_25_features = feature_engineer.create_features(
-            next_25_pvp, data_loader.players
+        # Create features in match order. Each match is featurized before its
+        # result is used to update player histories, which prevents look-ahead.
+        next_25_features = feature_engineer.create_rolling_features(
+            next_25,
+            data_loader.players,
+            data_loader,
+            betting_feature_engineer=betting_feature_engineer,
+            elo_tracker=elo_tracker,
+            random_state=42
         )
-        
-        # Add betting features
-        next_25_features = betting_feature_engineer.add_betting_features(
-            next_25_features, data_loader.players
+        final_25_features = feature_engineer.create_rolling_features(
+            final_25,
+            data_loader.players,
+            data_loader,
+            betting_feature_engineer=betting_feature_engineer,
+            elo_tracker=elo_tracker,
+            random_state=43
         )
+
+        if args.odds_file:
+            print("Attaching market odds features...")
+            next_25_features = odds_loader.attach_odds(next_25_features, odds)
+            final_25_features = odds_loader.attach_odds(final_25_features, odds)
         
         # Filter players with minimum matches
         player_match_count = (
-            next_25_features['player1'].value_counts() +
-            next_25_features['player2'].value_counts()
+            next_25_features['player1'].value_counts().add(
+                next_25_features['player2'].value_counts(),
+                fill_value=0
+            )
         )
         eligible_players = player_match_count[player_match_count >= 10].index
         next_25_features = next_25_features[
             next_25_features['player1'].isin(eligible_players) &
             next_25_features['player2'].isin(eligible_players)
         ]
-        
-        # Define features
-        feature_columns = [
-            'rank_diff', 'log_rank_diff', 'top_10_vs_not',
-            'age_diff', 'young_vs_old', 'seed_diff', 'seeded_vs_unseeded',
-            'height_diff', 'tall_vs_short', 'same_hand', 'left_vs_right',
-            'player1_last_5_win_percentage', 'player2_last_5_win_percentage',
-            'player1_last_10_win_percentage', 'player2_last_10_win_percentage',
-            'player1_surface_last_10_win_percentage', 'player2_surface_last_10_win_percentage',
-            'player1_preferred_surface', 'player2_preferred_surface',
-            'player1_surface_match', 'player2_surface_match',
-            'surface_preference_diff', 'head_to_head_wins_p1', 'head_to_head_wins_p2',
-            'surface_encoded', 'tournament_importance',
-            'player1_momentum', 'player2_momentum',
-            'player1_confidence', 'player2_confidence',
-            'player1_surface_advantage', 'player2_surface_advantage'
+        final_25_features = final_25_features[
+            final_25_features['player1'].isin(eligible_players) &
+            final_25_features['player2'].isin(eligible_players)
         ]
         
-        available_features = [col for col in feature_columns if col in next_25_features.columns]
+        available_features = [col for col in FEATURE_COLUMNS if col in next_25_features.columns]
         print(f"Using {len(available_features)} features")
         
         # Prepare training data
-        X = next_25_features[available_features].fillna(0)
-        y = next_25_features['result']
-        
-        # Split for validation
-        X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
-        )
-        
-        # Create top 10 mask
-        top_10_mask = (X_train['player1_rank'] <= 10) | (X_train['player2_rank'] <= 10)
+        top_10_train_mask = (next_25_features['player1_rank'] <= 10) | (next_25_features['player2_rank'] <= 10)
+        top_10_val_mask = (final_25_features['player1_rank'] <= 10) | (final_25_features['player2_rank'] <= 10)
+        X_train = next_25_features[available_features]
+        y_train = next_25_features['result']
+        X_val = final_25_features[available_features]
+        y_val = final_25_features['result']
+        print(f"Training matches after filter: {len(X_train)}")
+        print(f"No-look-ahead test matches after filter: {len(X_val)}")
         
         # Step 5: Train models
         print("\n[5/5] Training models...")
         results = trainer.train_separate_models(
-            X_train, y_train, top_10_mask, X_val, y_val
+            X_train, y_train, top_10_train_mask, X_val, y_val, top_10_val_mask
         )
         
         # Print results
@@ -182,4 +190,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
