@@ -891,6 +891,56 @@ def summarize_shrinkage_sweeps(sweeps: list[dict]) -> dict:
     }
 
 
+def _metric_leader(model_rows: list[dict], metric: str, higher_is_better: bool, baseline: dict | None) -> dict | None:
+    candidates = [row for row in model_rows if row.get(metric) is not None]
+    if not candidates:
+        return None
+    leader = max(candidates, key=lambda r: float(r[metric])) if higher_is_better else min(candidates, key=lambda r: float(r[metric]))
+    out = {
+        "model": str(leader.get("model", "unknown")),
+        metric: float(leader[metric]),
+    }
+    if baseline and baseline.get(metric) is not None:
+        out["delta_vs_baseline"] = float(leader[metric]) - float(baseline[metric])
+    return out
+
+
+def summarize_probability_quality_tradeoffs(model_rows: list[dict], baseline_model: str = "market_no_vig") -> dict:
+    """Summarize model leaders without letting accuracy hide poor probabilities.
+
+    Dennis's target is higher match-outcome accuracy only when calibration/log loss/
+    Brier remain strong. This compact report makes the tradeoff explicit in the JSON
+    artifact so hourly runs can spot accuracy-only regressions quickly.
+    """
+    rows = list(model_rows)
+    baseline = next((row for row in rows if row.get("model") == baseline_model), None)
+    ece_rows = []
+    for row in rows:
+        ece = (row.get("calibration_error_metrics") or {}).get("expected_calibration_error")
+        if ece is not None:
+            copied = dict(row)
+            copied["expected_calibration_error"] = float(ece)
+            ece_rows.append(copied)
+
+    best_by_log_loss = _metric_leader(rows, "log_loss", higher_is_better=False, baseline=baseline)
+    best_by_accuracy = _metric_leader(rows, "accuracy", higher_is_better=True, baseline=baseline)
+    warning = None
+    if best_by_log_loss and best_by_accuracy and best_by_log_loss["model"] != best_by_accuracy["model"]:
+        log_loss_leader_row = next((row for row in rows if row.get("model") == best_by_log_loss["model"]), {})
+        accuracy_gap = float(best_by_accuracy.get("accuracy", 0.0)) - float(log_loss_leader_row.get("accuracy", 0.0))
+        if accuracy_gap > 1e-12:
+            warning = "accuracy leader is not the log-loss leader; prioritize calibrated probability quality over accuracy-only gains"
+
+    return {
+        "baseline_model": baseline_model,
+        "best_by_log_loss": best_by_log_loss,
+        "best_by_brier": _metric_leader(rows, "brier", higher_is_better=False, baseline=baseline),
+        "best_by_accuracy": best_by_accuracy,
+        "best_by_ece": _metric_leader(ece_rows, "expected_calibration_error", higher_is_better=False, baseline=(dict(baseline, expected_calibration_error=(baseline.get("calibration_error_metrics") or {}).get("expected_calibration_error")) if baseline else None)),
+        "warning": warning,
+    }
+
+
 def summarize_calibration_diagnostics(model_rows: list[dict], min_rows: int = 50, top_n: int = 12) -> dict:
     """Summarize the largest material reliability-bin errors across model rows.
 
@@ -1436,6 +1486,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "years": years,
         "test_years": test_years,
         "overall_model_comparison": sorted(overall, key=lambda r: r["log_loss"]),
+        "overall_probability_quality_summary": summarize_probability_quality_tradeoffs(overall, baseline_model="market_no_vig"),
         "overall_calibration_summary": summarize_calibration_diagnostics(overall, min_rows=50, top_n=12),
         "bin_recalibration_diagnostics": recalibration_diagnostics,
         "bin_recalibration_shrinkage_sweeps": recalibration_shrinkage_sweeps,

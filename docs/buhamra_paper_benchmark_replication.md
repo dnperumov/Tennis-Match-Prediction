@@ -227,3 +227,20 @@ Verified commands:
 ```
 
 2022 fast-run signal from `data/betting_research/latest_advanced_feature_model_research.json`: `market_bin_recalibrated` remains best by log loss/Brier (0.581850 / 0.199417) and has lower ECE than raw market (0.029633 vs 0.031990), but `residual_overlay` has the lowest ECE (0.027683) while worse log loss/Brier. This confirms ECE is a useful calibration diagnostic, not a replacement objective; next tuning should target log loss/Brier first and use ECE/MCE to locate bucket-level calibration failures.
+
+## 2026-06-02 probability-quality tradeoff summary update
+
+`advanced_feature_model_research.py` now writes `overall_probability_quality_summary` into `data/betting_research/latest_advanced_feature_model_research.json`. The summary identifies the leaders by log loss, Brier, accuracy, and ECE, plus deltas versus `market_no_vig`, so hourly runs can quickly distinguish useful probability improvements from accuracy-only changes. A focused regression test also prevents a false warning when the accuracy leader merely ties the log-loss leader.
+
+Verified commands:
+
+```bash
+.venv/bin/python tests/test_calibration_summary.py -v && \
+.venv/bin/python -m py_compile scripts/advanced_feature_model_research.py scripts/betting_research_pipeline.py scripts/french_open_pick_tracker.py
+.venv/bin/python scripts/advanced_feature_model_research.py \
+  --years 2019 2020 2021 2022 \
+  --test-years 2022 \
+  --paper-test-years 2022
+```
+
+2022 summary: `market_bin_recalibrated` leads log loss and Brier versus market (`log_loss_delta_vs_baseline` -0.000515, `brier_delta_vs_baseline` -0.000183), market and recalibrated market tie on accuracy (0.681159), and `residual_overlay` has the lowest ECE (0.027683) despite worse proper scores. Research-methodology source remains scikit-learn's calibration guidance (`https://scikit-learn.org/stable/modules/calibration.html`): reliability diagnostics are useful for locating probability errors, but log loss/Brier remain the primary probability-quality objectives.

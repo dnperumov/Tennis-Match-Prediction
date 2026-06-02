@@ -15,6 +15,7 @@ from advanced_feature_model_research import (  # noqa: E402
     evaluate_bin_recalibration_shrinkage_sweep,
     fit_bin_recalibration,
     summarize_calibration_diagnostics,
+    summarize_probability_quality_tradeoffs,
     summarize_shrinkage_sweeps,
 )
 
@@ -103,6 +104,67 @@ class CalibrationSummaryTest(unittest.TestCase):
                 "worst_bins": [],
             },
         )
+
+    def test_summarize_probability_quality_tradeoffs_identifies_leaders_and_deltas(self) -> None:
+        rows = [
+            {
+                "model": "market_no_vig",
+                "accuracy": 0.68,
+                "log_loss": 0.582,
+                "brier": 0.200,
+                "calibration_error_metrics": {"expected_calibration_error": 0.032},
+            },
+            {
+                "model": "market_bin_recalibrated",
+                "accuracy": 0.681,
+                "log_loss": 0.581,
+                "brier": 0.199,
+                "calibration_error_metrics": {"expected_calibration_error": 0.029},
+            },
+            {
+                "model": "accuracy_only_model",
+                "accuracy": 0.70,
+                "log_loss": 0.610,
+                "brier": 0.215,
+                "calibration_error_metrics": {"expected_calibration_error": 0.055},
+            },
+        ]
+
+        summary = summarize_probability_quality_tradeoffs(rows, baseline_model="market_no_vig")
+
+        self.assertEqual(summary["baseline_model"], "market_no_vig")
+        self.assertEqual(summary["best_by_log_loss"]["model"], "market_bin_recalibrated")
+        self.assertEqual(summary["best_by_brier"]["model"], "market_bin_recalibrated")
+        self.assertEqual(summary["best_by_accuracy"]["model"], "accuracy_only_model")
+        self.assertEqual(summary["best_by_ece"]["model"], "market_bin_recalibrated")
+        self.assertAlmostEqual(summary["best_by_log_loss"]["delta_vs_baseline"], -0.001)
+        self.assertEqual(
+            summary["warning"],
+            "accuracy leader is not the log-loss leader; prioritize calibrated probability quality over accuracy-only gains",
+        )
+
+    def test_summarize_probability_quality_tradeoffs_does_not_warn_on_accuracy_tie(self) -> None:
+        rows = [
+            {
+                "model": "market_no_vig",
+                "accuracy": 0.6811594202898551,
+                "log_loss": 0.5823648180463947,
+                "brier": 0.1995997417581301,
+                "calibration_error_metrics": {"expected_calibration_error": 0.03198951399252753},
+            },
+            {
+                "model": "market_bin_recalibrated",
+                "accuracy": 0.6811594202898551,
+                "log_loss": 0.5818499979469696,
+                "brier": 0.1994167161959878,
+                "calibration_error_metrics": {"expected_calibration_error": 0.029632928158857347},
+            },
+        ]
+
+        summary = summarize_probability_quality_tradeoffs(rows, baseline_model="market_no_vig")
+
+        self.assertEqual(summary["best_by_log_loss"]["model"], "market_bin_recalibrated")
+        self.assertIsNone(summary["warning"])
 
     def test_shrinkage_sweep_reports_best_no_lookahead_recalibration(self) -> None:
         import pandas as pd
