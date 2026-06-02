@@ -22,10 +22,17 @@ wheels/
 
 # Virtual environments
 venv/
+.venv/
 env/
 ENV/
 tennis_env/
 tennis_env_39/
+
+# Local agent/runtime artifacts
+.hermes/
+ta_cache.sqlite
+*.sqlite
+*.db
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -41,7 +48,8 @@ tennis_env_39/
 # Models and data
 models/*.pkl
 *.pkl
-data/raw/
+data/
+!data/.gitkeep
 tennis_datav2/
 
 # OS

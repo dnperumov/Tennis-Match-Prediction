@@ -26,9 +26,18 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+# Allow running without installing the ta_tourney_scrape package.
+# (We don't have pip/venv in this environment.)
+_THIS_FILE = Path(__file__).resolve()
+_REPO_ROOT = _THIS_FILE.parents[2]
+_TA_SRC = _REPO_ROOT / "ta_tourney_scrape" / "src"
+if _TA_SRC.exists():
+    sys.path.insert(0, str(_TA_SRC))
 
 
 def _is_missing(v: object) -> bool:
