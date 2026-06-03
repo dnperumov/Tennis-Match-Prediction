@@ -1368,6 +1368,58 @@ def interaction_segment_errors(
     return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
 
 
+DEFAULT_MULTIVARIATE_SEGMENT_GROUPS = [
+    ("series", "round_group", "rank_diff_bucket"),
+    ("series", "round_group", "market_prob_bucket"),
+    ("series", "market_prob_bucket", "surface_switch_any"),
+    ("series", "market_prob_bucket", "rest_diff_bucket"),
+    ("surface", "round_group", "market_prob_bucket"),
+    ("surface", "round_group", "rank_diff_bucket"),
+    ("surface", "market_prob_bucket", "surface_switch_any"),
+    ("market_prob_bucket", "rank_diff_bucket", "matches_last7_diff_bucket"),
+    ("market_prob_bucket", "rank_diff_bucket", "rest_diff_bucket"),
+    ("market_prob_bucket", "surface_switch_any", "post_title_or_final_any"),
+]
+
+
+def multivariate_segment_errors(
+    preds: pd.DataFrame,
+    prob_col: str,
+    segment_groups: list[tuple[str, ...]] | None = None,
+    min_rows: int = 120,
+) -> list[dict]:
+    """Score material three-way-plus diagnostic buckets against the no-vig market.
+
+    Two-way scans are useful but can still smear together distinct contexts. This
+    keeps the same OOS prediction rows and only creates reporting-only composite
+    buckets, with yearly stability fields to avoid surfacing one-year noise.
+    """
+    rows = []
+    df = _bucket_segment_diagnostics(preds)
+    groups = segment_groups or DEFAULT_MULTIVARIATE_SEGMENT_GROUPS
+    for group in groups:
+        if not set(group).issubset(df.columns):
+            continue
+        tmp = df.copy()
+        segment_col = "__".join(group)
+        segment_values = tmp[list(group)].astype(object).where(tmp[list(group)].notna(), "nan").astype(str)
+        tmp[segment_col] = segment_values.agg(" | ".join, axis=1)
+        for seg, g in tmp.groupby(segment_col, dropna=False):
+            if len(g) < min_rows:
+                continue
+            m = metrics_for(g, prob_col)
+            rows.append({
+                "segment_col": segment_col,
+                "segment": str(seg),
+                "segment_columns": list(group),
+                **m,
+                **segment_year_stability(g, prob_col),
+                "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
+                "model_minus_market_brier": float(m["brier"] - m["market_brier"]),
+            })
+    return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
+
+
 def segment_year_stability(g: pd.DataFrame, prob_col: str) -> dict:
     """Summarize whether a segment's model-vs-market result persists across years."""
     empty = {
@@ -1737,6 +1789,8 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     residual_segments = segment_errors(preds, "residual_overlay_p1")
     advanced_interaction_segments = interaction_segment_errors(preds, "advanced_features_p1", min_rows=120)
     residual_interaction_segments = interaction_segment_errors(preds, "residual_overlay_p1", min_rows=120)
+    advanced_multivariate_segments = multivariate_segment_errors(preds, "advanced_features_p1", min_rows=120)
+    residual_multivariate_segments = multivariate_segment_errors(preds, "residual_overlay_p1", min_rows=120)
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "years": years,
@@ -1754,14 +1808,20 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_residual_overlay_underperforms_market": residual_segments[:40],
         "where_advanced_interactions_underperform_market": advanced_interaction_segments[:40],
         "where_residual_overlay_interactions_underperform_market": residual_interaction_segments[:40],
+        "where_advanced_multivariate_underperform_market": advanced_multivariate_segments[:40],
+        "where_residual_overlay_multivariate_underperform_market": residual_multivariate_segments[:40],
         "where_advanced_stably_lags_market": summarize_segment_weaknesses(advanced_segments, min_rows=150, top_n=12),
         "where_residual_overlay_stably_lags_market": summarize_segment_weaknesses(residual_segments, min_rows=150, top_n=12),
         "where_advanced_interactions_stably_lag_market": summarize_segment_weaknesses(advanced_interaction_segments, min_rows=150, top_n=12),
         "where_residual_overlay_interactions_stably_lag_market": summarize_segment_weaknesses(residual_interaction_segments, min_rows=150, top_n=12),
+        "where_advanced_multivariate_stably_lag_market": summarize_segment_weaknesses(advanced_multivariate_segments, min_rows=150, top_n=12),
+        "where_residual_overlay_multivariate_stably_lag_market": summarize_segment_weaknesses(residual_multivariate_segments, min_rows=150, top_n=12),
         "where_advanced_beats_market": summarize_segment_strengths(advanced_segments, min_rows=150, top_n=12),
         "where_residual_overlay_beats_market": summarize_segment_strengths(residual_segments, min_rows=150, top_n=12),
         "where_advanced_interactions_beat_market": summarize_segment_strengths(advanced_interaction_segments, min_rows=150, top_n=12),
         "where_residual_overlay_interactions_beat_market": summarize_segment_strengths(residual_interaction_segments, min_rows=150, top_n=12),
+        "where_advanced_multivariate_beat_market": summarize_segment_strengths(advanced_multivariate_segments, min_rows=150, top_n=12),
+        "where_residual_overlay_multivariate_beat_market": summarize_segment_strengths(residual_multivariate_segments, min_rows=150, top_n=12),
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
         "residual_overlay_underperformance_clusters": cluster_underperformance(preds, "residual_overlay_p1", n_clusters=8),
         "feature_notes": {

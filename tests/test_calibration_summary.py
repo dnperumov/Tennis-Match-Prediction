@@ -17,6 +17,7 @@ from advanced_feature_model_research import (  # noqa: E402
     segment_errors,
     summarize_calibration_diagnostics,
     interaction_segment_errors,
+    multivariate_segment_errors,
     summarize_probability_quality_tradeoffs,
     summarize_segment_strengths,
     summarize_segment_weaknesses,
@@ -263,6 +264,64 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(diagnostics[0]["year_count"], 3)
         self.assertEqual(diagnostics[0]["years_model_beats_market_log_loss"], 3)
         self.assertLess(diagnostics[0]["model_minus_market_log_loss"], 0)
+
+    def test_multivariate_segment_errors_finds_three_way_contexts(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023, 2024]:
+            for i in range(85):
+                rows.append({
+                    "date": f"{year}-04-{(i % 9) + 1:02d}",
+                    "result": 1 if i % 2 else 0,
+                    "model_p1": 0.68 if i % 2 else 0.30,
+                    "implied_p1_no_vig": 0.50,
+                    "series": "ATP250",
+                    "round_group": "early",
+                    "rank_diff": 70,
+                    "surface": "Clay",
+                })
+
+        diagnostics = multivariate_segment_errors(
+            pd.DataFrame(rows),
+            "model_p1",
+            segment_groups=[("series", "round_group", "rank_diff_bucket")],
+            min_rows=80,
+        )
+
+        self.assertEqual(len(diagnostics), 1)
+        self.assertEqual(diagnostics[0]["segment_col"], "series__round_group__rank_diff_bucket")
+        self.assertEqual(diagnostics[0]["segment"], "ATP250 | early | p1_much_lower_rank")
+        self.assertEqual(diagnostics[0]["segment_columns"], ["series", "round_group", "rank_diff_bucket"])
+        self.assertEqual(diagnostics[0]["rows"], 255)
+        self.assertEqual(diagnostics[0]["year_count"], 3)
+        self.assertLess(diagnostics[0]["model_minus_market_log_loss"], 0)
+
+    def test_multivariate_segment_errors_handles_missing_bucket_values(self) -> None:
+        import pandas as pd
+        import numpy as np
+
+        rows = []
+        for i in range(130):
+            rows.append({
+                "date": "2024-05-01",
+                "result": 1 if i % 2 else 0,
+                "model_p1": 0.60 if i % 2 else 0.40,
+                "implied_p1_no_vig": 0.50,
+                "series": "ATP250",
+                "round_group": "early",
+                "rank_diff": np.nan,
+            })
+
+        diagnostics = multivariate_segment_errors(
+            pd.DataFrame(rows),
+            "model_p1",
+            segment_groups=[("series", "round_group", "rank_diff_bucket")],
+            min_rows=120,
+        )
+
+        self.assertEqual(diagnostics[0]["segment"], "ATP250 | early | nan")
+        self.assertEqual(diagnostics[0]["rows"], 130)
 
     def test_interaction_segment_errors_handles_single_class_year_buckets(self) -> None:
         import pandas as pd
