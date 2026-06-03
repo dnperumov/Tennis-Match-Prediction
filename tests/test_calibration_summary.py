@@ -19,6 +19,7 @@ from advanced_feature_model_research import (  # noqa: E402
     summarize_calibration_diagnostics,
     interaction_segment_errors,
     interaction_model_market_disagreement_segments,
+    model_market_agreement_segments,
     model_market_disagreement_segments,
     multivariate_segment_errors,
     no_lookahead_blend_weight_diagnostic,
@@ -192,6 +193,49 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(segments_by_col["matches_last7_diff_bucket"], "p1_heavier_load")
         self.assertEqual(segments_by_col["surface_switch_any"], "True")
         self.assertEqual(segments_by_col["post_title_or_final_any"], "False")
+
+    def test_model_market_agreement_segments_scores_probability_sizing_not_pick_overrides(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023, 2024]:
+            # Market and model both pick p1, but the model is more overconfident and
+            # should be diagnosed separately from true pick overrides.
+            for i in range(50):
+                rows.append({
+                    "date": f"{year}-02-{(i % 9) + 1:02d}",
+                    "result": 1 if i % 2 else 0,
+                    "model_p1": 0.82,
+                    "implied_p1_no_vig": 0.60,
+                    "series": "ATP250",
+                    "round_group": "early",
+                })
+            # Disagreement rows in the same segment must be excluded from the
+            # agreement diagnostic and counted for auditability.
+            for i in range(10):
+                rows.append({
+                    "date": f"{year}-03-{(i % 9) + 1:02d}",
+                    "result": 0,
+                    "model_p1": 0.62,
+                    "implied_p1_no_vig": 0.48,
+                    "series": "ATP250",
+                    "round_group": "early",
+                })
+
+        diagnostics = model_market_agreement_segments(
+            pd.DataFrame(rows),
+            "model_p1",
+            segment_cols=["series", "round_group"],
+            min_rows=120,
+        )
+
+        by_col = {row["segment_col"]: row for row in diagnostics}
+        self.assertEqual(by_col["series"]["agreement_rows"], 150)
+        self.assertEqual(by_col["series"]["disagreement_rows_excluded"], 30)
+        self.assertEqual(by_col["series"]["model_pick_accuracy"], by_col["series"]["market_pick_accuracy"])
+        self.assertGreater(by_col["series"]["model_minus_market_log_loss"], 0)
+        self.assertGreater(by_col["series"]["model_minus_market_brier"], 0)
+        self.assertEqual(by_col["series"]["year_count"], 3)
 
     def test_disagreement_margin_segments_scores_only_model_market_overrides_by_gap_bucket(self) -> None:
         import pandas as pd

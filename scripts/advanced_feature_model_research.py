@@ -1360,6 +1360,53 @@ def model_market_disagreement_segments(
     return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
 
 
+def model_market_agreement_segments(
+    preds: pd.DataFrame,
+    prob_col: str,
+    segment_cols: list[str] | None = None,
+    min_rows: int = 120,
+) -> list[dict]:
+    """Score contexts where model and market pick the same side but probability sizing differs.
+
+    Disagreement diagnostics answer whether a model should override the market favorite.
+    This companion keeps only rows where both pick the same player, so stable losses
+    point to calibration/overconfidence problems rather than bad side selection.
+    """
+    rows = []
+    df = _bucket_segment_diagnostics(preds)
+    if prob_col not in df.columns or "implied_p1_no_vig" not in df.columns:
+        return rows
+    df = df.copy()
+    df["_model_pick"] = (df[prob_col] >= 0.5).astype(int)
+    df["_market_pick"] = (df["implied_p1_no_vig"] >= 0.5).astype(int)
+    df["_model_market_agree"] = df["_model_pick"] == df["_market_pick"]
+    cols = segment_cols or DEFAULT_SEGMENT_COLS
+    for col in [c for c in cols if c in df.columns]:
+        for seg, all_g in df.groupby(col, dropna=False):
+            g = all_g[all_g["_model_market_agree"]].copy()
+            if len(g) < min_rows:
+                continue
+            m = metrics_for(g, prob_col)
+            y = g["result"].astype(int)
+            model_pick_accuracy = float((g["_model_pick"] == y).mean())
+            market_pick_accuracy = float((g["_market_pick"] == y).mean())
+            rows.append({
+                "segment_col": col,
+                "segment": str(seg),
+                **m,
+                **segment_year_stability(g, prob_col),
+                "agreement_rows": int(len(g)),
+                "disagreement_rows_excluded": int(len(all_g) - len(g)),
+                "model_pick_accuracy": model_pick_accuracy,
+                "market_pick_accuracy": market_pick_accuracy,
+                "model_minus_market_pick_accuracy": float(model_pick_accuracy - market_pick_accuracy),
+                "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
+                "model_minus_market_brier": float(m["brier"] - m["market_brier"]),
+                "mean_abs_probability_delta": float((g[prob_col].astype(float) - g["implied_p1_no_vig"].astype(float)).abs().mean()),
+            })
+    return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
+
+
 def disagreement_margin_segments(preds: pd.DataFrame, prob_col: str, min_rows: int = 120) -> list[dict]:
     """Score model-vs-market override rows by disagreement direction and probability gap.
 
@@ -2347,6 +2394,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     advanced_disagreement_segments = model_market_disagreement_segments(preds, "advanced_features_p1", min_rows=120)
     residual_disagreement_segments = model_market_disagreement_segments(preds, "residual_overlay_p1", min_rows=120)
     filtered_disagreement_segments = model_market_disagreement_segments(preds, "residual_overlay_filtered_p1", min_rows=120)
+    advanced_agreement_segments = model_market_agreement_segments(preds, "advanced_features_p1", min_rows=120)
+    residual_agreement_segments = model_market_agreement_segments(preds, "residual_overlay_p1", min_rows=120)
+    filtered_agreement_segments = model_market_agreement_segments(preds, "residual_overlay_filtered_p1", min_rows=120)
     advanced_disagreement_margin_segments = disagreement_margin_segments(preds, "advanced_features_p1", min_rows=120)
     residual_disagreement_margin_segments = disagreement_margin_segments(preds, "residual_overlay_p1", min_rows=120)
     filtered_disagreement_margin_segments = disagreement_margin_segments(preds, "residual_overlay_filtered_p1", min_rows=120)
@@ -2384,6 +2434,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_disagrees_with_market": advanced_disagreement_segments[:40],
         "where_residual_overlay_disagrees_with_market": residual_disagreement_segments[:40],
         "where_filtered_overlay_disagrees_with_market": filtered_disagreement_segments[:40],
+        "where_advanced_agrees_with_market_but_sizing_lags": advanced_agreement_segments[:40],
+        "where_residual_overlay_agrees_with_market_but_sizing_lags": residual_agreement_segments[:40],
+        "where_filtered_overlay_agrees_with_market_but_sizing_lags": filtered_agreement_segments[:40],
         "where_advanced_disagreement_margin_lags_market": advanced_disagreement_margin_segments[:40],
         "where_residual_overlay_disagreement_margin_lags_market": residual_disagreement_margin_segments[:40],
         "where_filtered_overlay_disagreement_margin_lags_market": filtered_disagreement_margin_segments[:40],
@@ -2405,6 +2458,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_disagreement_stably_lags_market": summarize_segment_weaknesses(advanced_disagreement_segments, min_rows=150, top_n=12),
         "where_residual_overlay_disagreement_stably_lags_market": summarize_segment_weaknesses(residual_disagreement_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_disagreement_stably_lags_market": summarize_segment_weaknesses(filtered_disagreement_segments, min_rows=150, top_n=12),
+        "where_advanced_agreement_sizing_stably_lags_market": summarize_segment_weaknesses(advanced_agreement_segments, min_rows=150, top_n=12),
+        "where_residual_overlay_agreement_sizing_stably_lags_market": summarize_segment_weaknesses(residual_agreement_segments, min_rows=150, top_n=12),
+        "where_filtered_overlay_agreement_sizing_stably_lags_market": summarize_segment_weaknesses(filtered_agreement_segments, min_rows=150, top_n=12),
         "where_advanced_disagreement_margin_stably_lags_market": summarize_segment_weaknesses(advanced_disagreement_margin_segments, min_rows=150, top_n=12),
         "where_residual_overlay_disagreement_margin_stably_lags_market": summarize_segment_weaknesses(residual_disagreement_margin_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_disagreement_margin_stably_lags_market": summarize_segment_weaknesses(filtered_disagreement_margin_segments, min_rows=150, top_n=12),
@@ -2414,6 +2470,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_disagreement_beats_market": summarize_segment_strengths(advanced_disagreement_segments, min_rows=150, top_n=12),
         "where_residual_overlay_disagreement_beats_market": summarize_segment_strengths(residual_disagreement_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_disagreement_beats_market": summarize_segment_strengths(filtered_disagreement_segments, min_rows=150, top_n=12),
+        "where_advanced_agreement_sizing_beats_market": summarize_segment_strengths(advanced_agreement_segments, min_rows=150, top_n=12),
+        "where_residual_overlay_agreement_sizing_beats_market": summarize_segment_strengths(residual_agreement_segments, min_rows=150, top_n=12),
+        "where_filtered_overlay_agreement_sizing_beats_market": summarize_segment_strengths(filtered_agreement_segments, min_rows=150, top_n=12),
         "where_advanced_disagreement_margin_beats_market": summarize_segment_strengths(advanced_disagreement_margin_segments, min_rows=150, top_n=12),
         "where_residual_overlay_disagreement_margin_beats_market": summarize_segment_strengths(residual_disagreement_margin_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_disagreement_margin_beats_market": summarize_segment_strengths(filtered_disagreement_margin_segments, min_rows=150, top_n=12),
@@ -2450,6 +2509,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "residual_overlay": "fits result - no-vig-market as target, applies segment-tuned shrinkage, and uses specialist residual models in early ATP250, post-title/final, surface-switch, Grand Slam, top10, and early-surface-switch buckets",
             "underperformance_filter": "predicts rows where advanced features are likely worse than market; filtered overlay falls back to market when risk is high",
             "model_market_disagreement": "diagnostic-only scans of rows where a model flips the no-vig market favorite, including two-way interaction disagreement buckets; useful for separating true model overrides from rows where model and market already agree",
+            "model_market_agreement_sizing": "diagnostic-only scans of rows where model and no-vig market pick the same player; isolates probability-sizing/overconfidence damage from true side-selection overrides",
             "disagreement_margin": "diagnostic-only model-vs-market override scan by probability-gap size and override direction; tests whether bigger model-market disagreements are safer signals or stable damage clusters",
             "disagreement_fallback_routing": "no-lookahead diagnostic policy that uses only prior OOS years to identify stable model-damaging disagreement buckets and route those future bucket disagreements back to no-vig market probability",
             "prior_year_blend_weight": "diagnostic-only no-lookahead policy that selects a market/model blend weight from prior OOS years by log loss and applies it to the next held-out year; useful for testing whether feature probabilities should override market or mostly shrink to it",
