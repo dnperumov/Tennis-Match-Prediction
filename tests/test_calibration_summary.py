@@ -17,6 +17,7 @@ from advanced_feature_model_research import (  # noqa: E402
     segment_errors,
     summarize_calibration_diagnostics,
     interaction_segment_errors,
+    interaction_model_market_disagreement_segments,
     model_market_disagreement_segments,
     multivariate_segment_errors,
     summarize_probability_quality_tradeoffs,
@@ -498,6 +499,76 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(by_col["series"]["years_model_beats_market_log_loss"], 3)
         self.assertLess(by_col["series"]["model_minus_market_log_loss"], 0)
         self.assertGreater(by_col["series"]["model_pick_accuracy"], by_col["series"]["market_pick_accuracy"])
+
+    def test_interaction_model_market_disagreement_segments_finds_two_way_override_contexts(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023, 2024]:
+            for i in range(60):
+                rows.append({
+                    "date": f"{year}-08-{(i % 9) + 1:02d}",
+                    "result": 1,
+                    "model_p1": 0.62,
+                    "implied_p1_no_vig": 0.44,
+                    "series": "ATP250",
+                    "round_group": "early",
+                    "surface": "Clay",
+                    "rank_diff": -30,
+                    "rest_diff": 0,
+                    "matches_last7_diff": 0,
+                    "p1_surface_switch": 0,
+                    "p2_surface_switch": 0,
+                    "p1_title_within_14": 0,
+                    "p2_title_within_14": 0,
+                    "p1_final_within_7": 0,
+                    "p2_final_within_7": 0,
+                })
+                rows.append({
+                    "date": f"{year}-08-{(i % 9) + 1:02d}",
+                    "result": 0,
+                    "model_p1": 0.38,
+                    "implied_p1_no_vig": 0.56,
+                    "series": "ATP250",
+                    "round_group": "early",
+                    "surface": "Clay",
+                    "rank_diff": 30,
+                    "rest_diff": 0,
+                    "matches_last7_diff": 0,
+                    "p1_surface_switch": 0,
+                    "p2_surface_switch": 0,
+                    "p1_title_within_14": 0,
+                    "p2_title_within_14": 0,
+                    "p1_final_within_7": 0,
+                    "p2_final_within_7": 0,
+                })
+            for i in range(25):
+                rows.append({
+                    "date": f"{year}-09-{(i % 9) + 1:02d}",
+                    "result": 1,
+                    "model_p1": 0.70,
+                    "implied_p1_no_vig": 0.80,
+                    "series": "ATP250",
+                    "round_group": "early",
+                    "surface": "Clay",
+                })
+
+        diagnostics = interaction_model_market_disagreement_segments(
+            pd.DataFrame(rows),
+            "model_p1",
+            interaction_pairs=[("series", "round_group")],
+            min_rows=100,
+        )
+
+        self.assertEqual(len(diagnostics), 1)
+        self.assertEqual(diagnostics[0]["segment_col"], "series__round_group")
+        self.assertEqual(diagnostics[0]["segment"], "ATP250 | early")
+        self.assertEqual(diagnostics[0]["rows"], 360)
+        self.assertEqual(diagnostics[0]["disagreement_rows"], 360)
+        self.assertEqual(diagnostics[0]["agreement_rows_excluded"], 75)
+        self.assertEqual(diagnostics[0]["year_count"], 3)
+        self.assertEqual(diagnostics[0]["years_model_beats_market_log_loss"], 3)
+        self.assertGreater(diagnostics[0]["model_pick_accuracy"], diagnostics[0]["market_pick_accuracy"])
 
     def test_summarize_segment_weaknesses_keeps_only_stable_market_lagging_segments(self) -> None:
         segment_rows = [
