@@ -14,8 +14,10 @@ from advanced_feature_model_research import (  # noqa: E402
     calibration_error_metrics,
     evaluate_bin_recalibration_shrinkage_sweep,
     fit_bin_recalibration,
+    segment_errors,
     summarize_calibration_diagnostics,
     summarize_probability_quality_tradeoffs,
+    summarize_segment_strengths,
     summarize_shrinkage_sweeps,
 )
 
@@ -142,6 +144,154 @@ class CalibrationSummaryTest(unittest.TestCase):
             summary["warning"],
             "accuracy leader is not the log-loss leader; prioritize calibrated probability quality over accuracy-only gains",
         )
+
+    def test_segment_errors_includes_rank_odds_rest_fatigue_and_context_buckets(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for i in range(90):
+            rows.append({
+                "result": 1 if i % 3 else 0,
+                "model_p1": 0.70 if i % 3 else 0.80,
+                "implied_p1_no_vig": 0.82,
+                "surface": "Clay",
+                "series": "ATP250",
+                "court": "Outdoor",
+                "round_group": "early",
+                "round": "1st Round",
+                "is_early_round": 1,
+                "any_top10": 0,
+                "both_top10": 0,
+                "early_after_title_p1": 0,
+                "early_after_title_p2": 0,
+                "p1_title_within_14": 0,
+                "p2_title_within_14": 0,
+                "p1_final_within_7": 0,
+                "p2_final_within_7": 0,
+                "p1_surface_switch": 1,
+                "p2_surface_switch": 0,
+                "rank_diff": 75,
+                "rest_diff": -4,
+                "matches_last7_diff": 3,
+            })
+        diagnostics = segment_errors(pd.DataFrame(rows), "model_p1")
+        segments_by_col = {row["segment_col"]: row["segment"] for row in diagnostics}
+
+        self.assertEqual(segments_by_col["rank_diff_bucket"], "p1_much_lower_rank")
+        self.assertEqual(segments_by_col["market_prob_bucket"], "heavy_p1_favorite")
+        self.assertEqual(segments_by_col["rest_diff_bucket"], "p1_less_rest")
+        self.assertEqual(segments_by_col["matches_last7_diff_bucket"], "p1_heavier_load")
+        self.assertEqual(segments_by_col["surface_switch_any"], "True")
+        self.assertEqual(segments_by_col["post_title_or_final_any"], "False")
+
+    def test_segment_errors_adds_year_stability_diagnostics(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023, 2024]:
+            for i in range(90):
+                rows.append({
+                    "date": f"{year}-01-0{(i % 9) + 1}",
+                    "result": 1 if i % 2 else 0,
+                    "model_p1": 0.70 if i % 2 else 0.20,
+                    "implied_p1_no_vig": 0.50,
+                    "surface": "Grass",
+                    "series": "ATP250",
+                    "court": "Outdoor",
+                    "round_group": "early",
+                    "round": "1st Round",
+                    "is_early_round": 1,
+                    "any_top10": 0,
+                    "both_top10": 0,
+                    "early_after_title_p1": 0,
+                    "early_after_title_p2": 0,
+                })
+
+        grass = next(row for row in segment_errors(pd.DataFrame(rows), "model_p1") if row["segment_col"] == "surface")
+
+        self.assertEqual(grass["years"], [2022, 2023, 2024])
+        self.assertEqual(grass["year_count"], 3)
+        self.assertEqual(grass["min_year_rows"], 90)
+        self.assertEqual(grass["years_model_beats_market_log_loss"], 3)
+        self.assertEqual(grass["years_model_beats_market_brier"], 3)
+
+    def test_summarize_segment_strengths_keeps_only_stable_market_beating_segments(self) -> None:
+        segment_rows = [
+            {
+                "segment_col": "surface",
+                "segment": "Clay",
+                "rows": 300,
+                "accuracy": 0.70,
+                "log_loss": 0.55,
+                "market_log_loss": 0.58,
+                "brier": 0.18,
+                "market_brier": 0.20,
+                "model_minus_market_log_loss": -0.03,
+                "model_minus_market_brier": -0.02,
+                "year_count": 3,
+                "min_year_rows": 100,
+                "years_model_beats_market_log_loss": 3,
+                "years_model_beats_market_brier": 3,
+            },
+            {
+                "segment_col": "round_group",
+                "segment": "late",
+                "rows": 90,
+                "accuracy": 0.72,
+                "log_loss": 0.52,
+                "market_log_loss": 0.56,
+                "brier": 0.17,
+                "market_brier": 0.19,
+                "model_minus_market_log_loss": -0.04,
+                "model_minus_market_brier": -0.02,
+                "year_count": 3,
+                "min_year_rows": 30,
+                "years_model_beats_market_log_loss": 3,
+                "years_model_beats_market_brier": 3,
+            },
+            {
+                "segment_col": "market_prob_bucket",
+                "segment": "near_pickem",
+                "rows": 450,
+                "accuracy": 0.55,
+                "log_loss": 0.68,
+                "market_log_loss": 0.69,
+                "brier": 0.24,
+                "market_brier": 0.25,
+                "model_minus_market_log_loss": -0.01,
+                "model_minus_market_brier": -0.01,
+                "year_count": 3,
+                "min_year_rows": 150,
+                "years_model_beats_market_log_loss": 1,
+                "years_model_beats_market_brier": 3,
+            },
+            {
+                "segment_col": "series",
+                "segment": "ATP250",
+                "rows": 400,
+                "accuracy": 0.61,
+                "log_loss": 0.62,
+                "market_log_loss": 0.59,
+                "brier": 0.22,
+                "market_brier": 0.20,
+                "model_minus_market_log_loss": 0.03,
+                "model_minus_market_brier": 0.02,
+                "year_count": 3,
+                "min_year_rows": 120,
+                "years_model_beats_market_log_loss": 0,
+                "years_model_beats_market_brier": 0,
+            },
+        ]
+
+        summary = summarize_segment_strengths(segment_rows, min_rows=100, top_n=3, min_years=3)
+
+        self.assertEqual(summary["min_rows"], 100)
+        self.assertEqual(summary["min_years"], 3)
+        self.assertEqual(summary["candidate_count"], 1)
+        self.assertEqual(summary["excluded_low_sample_segments"], 1)
+        self.assertEqual(summary["excluded_unstable_segments"], 1)
+        self.assertEqual(summary["top_segments"][0]["segment"], "Clay")
+        self.assertAlmostEqual(summary["top_segments"][0]["weighted_log_loss_improvement"], 9.0)
 
     def test_summarize_probability_quality_tradeoffs_does_not_warn_on_accuracy_tie(self) -> None:
         rows = [

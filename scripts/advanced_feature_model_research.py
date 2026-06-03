@@ -1252,10 +1252,51 @@ def candidate_betting(df: pd.DataFrame, prob_col: str, threshold: float) -> dict
     }
 
 
+def _bucket_segment_diagnostics(preds: pd.DataFrame) -> pd.DataFrame:
+    """Add coarse all-data diagnostic buckets without affecting model features."""
+    df = preds.copy()
+    if "rank_diff" in df:
+        df["rank_diff_bucket"] = pd.cut(
+            df["rank_diff"],
+            bins=[-np.inf, -50, -15, 15, 50, np.inf],
+            labels=["p1_much_higher_rank", "p1_higher_rank", "similar_rank", "p1_lower_rank", "p1_much_lower_rank"],
+        ).astype(str)
+    if "implied_p1_no_vig" in df:
+        df["market_prob_bucket"] = pd.cut(
+            df["implied_p1_no_vig"],
+            bins=[-np.inf, 0.30, 0.45, 0.55, 0.70, np.inf],
+            labels=["heavy_p2_favorite", "p2_favorite", "near_pickem", "p1_favorite", "heavy_p1_favorite"],
+        ).astype(str)
+    if "rest_diff" in df:
+        df["rest_diff_bucket"] = pd.cut(
+            df["rest_diff"],
+            bins=[-np.inf, -3, -1, 1, 3, np.inf],
+            labels=["p1_less_rest", "p1_slightly_less_rest", "similar_rest", "p1_slightly_more_rest", "p1_more_rest"],
+        ).astype(str)
+    if "matches_last7_diff" in df:
+        df["matches_last7_diff_bucket"] = pd.cut(
+            df["matches_last7_diff"],
+            bins=[-np.inf, -2, -1, 1, 2, np.inf],
+            labels=["p2_heavier_load", "p2_slightly_heavier_load", "similar_load", "p1_slightly_heavier_load", "p1_heavier_load"],
+        ).astype(str)
+    if {"p1_surface_switch", "p2_surface_switch"}.issubset(df.columns):
+        df["surface_switch_any"] = (df["p1_surface_switch"].eq(1) | df["p2_surface_switch"].eq(1))
+    title_final_cols = ["p1_title_within_14", "p2_title_within_14", "p1_final_within_7", "p2_final_within_7"]
+    if set(title_final_cols).issubset(df.columns):
+        df["post_title_or_final_any"] = df[title_final_cols].eq(1).any(axis=1)
+    return df
+
+
 def segment_errors(preds: pd.DataFrame, prob_col: str) -> list[dict]:
     rows = []
-    for col in ["surface", "series", "court", "round_group", "round", "is_early_round", "any_top10", "both_top10", "early_after_title_p1", "early_after_title_p2"]:
-        for seg, g in preds.groupby(col, dropna=False):
+    df = _bucket_segment_diagnostics(preds)
+    segment_cols = [
+        "surface", "series", "court", "round_group", "round", "is_early_round", "any_top10", "both_top10",
+        "early_after_title_p1", "early_after_title_p2", "rank_diff_bucket", "market_prob_bucket",
+        "rest_diff_bucket", "matches_last7_diff_bucket", "surface_switch_any", "post_title_or_final_any",
+    ]
+    for col in [c for c in segment_cols if c in df.columns]:
+        for seg, g in df.groupby(col, dropna=False):
             if len(g) < 80:
                 continue
             m = metrics_for(g, prob_col)
@@ -1263,10 +1304,105 @@ def segment_errors(preds: pd.DataFrame, prob_col: str) -> list[dict]:
                 "segment_col": col,
                 "segment": str(seg),
                 **m,
+                **segment_year_stability(g, prob_col),
                 "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
                 "model_minus_market_brier": float(m["brier"] - m["market_brier"]),
             })
     return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
+
+
+def segment_year_stability(g: pd.DataFrame, prob_col: str) -> dict:
+    """Summarize whether a segment's model-vs-market result persists across years."""
+    empty = {
+        "years": [],
+        "year_count": 0,
+        "min_year_rows": 0,
+        "years_model_beats_market_log_loss": 0,
+        "years_model_beats_market_brier": 0,
+        "yearly_model_minus_market": [],
+    }
+    if "date" not in g.columns:
+        return empty
+    tmp = g.copy()
+    tmp["_year"] = pd.to_datetime(tmp["date"], errors="coerce").dt.year
+    tmp = tmp.dropna(subset=["_year"])
+    if tmp.empty:
+        return empty
+    yearly = []
+    for year, yg in tmp.groupby("_year"):
+        m = metrics_for(yg, prob_col)
+        yearly.append({
+            "year": int(year),
+            "rows": int(len(yg)),
+            "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
+            "model_minus_market_brier": float(m["brier"] - m["market_brier"]),
+        })
+    return {
+        "years": [row["year"] for row in yearly],
+        "year_count": int(len(yearly)),
+        "min_year_rows": int(min(row["rows"] for row in yearly)),
+        "years_model_beats_market_log_loss": int(sum(row["model_minus_market_log_loss"] < 0 for row in yearly)),
+        "years_model_beats_market_brier": int(sum(row["model_minus_market_brier"] < 0 for row in yearly)),
+        "yearly_model_minus_market": yearly,
+    }
+
+
+def summarize_segment_strengths(
+    segment_rows: list[dict],
+    min_rows: int = 150,
+    top_n: int = 12,
+    min_years: int = 3,
+    min_stable_year_share: float = 0.60,
+) -> dict:
+    """Return material segments where a model beats the no-vig market baseline.
+
+    Segment diagnostics are sorted worst-first for debugging. This companion summary
+    makes stable-looking strengths visible without changing any model predictions or
+    treating broad-scan positives as betting signals.
+    """
+    candidates = []
+    excluded_low_sample_segments = 0
+    excluded_unstable_segments = 0
+    for row in segment_rows:
+        rows = int(row.get("rows", 0))
+        log_loss_delta = float(row.get("model_minus_market_log_loss", 0.0))
+        brier_delta = float(row.get("model_minus_market_brier", 0.0))
+        if log_loss_delta >= 0 or brier_delta >= 0:
+            continue
+        if rows < min_rows:
+            excluded_low_sample_segments += 1
+            continue
+        year_count = int(row.get("year_count", 0))
+        if year_count:
+            required_stable_years = max(min_years, int(math.ceil(year_count * min_stable_year_share)))
+            if (
+                year_count < min_years
+                or int(row.get("years_model_beats_market_log_loss", 0)) < required_stable_years
+                or int(row.get("years_model_beats_market_brier", 0)) < required_stable_years
+            ):
+                excluded_unstable_segments += 1
+                continue
+        enriched = dict(row)
+        enriched["weighted_log_loss_improvement"] = float(-log_loss_delta * rows)
+        enriched["weighted_brier_improvement"] = float(-brier_delta * rows)
+        enriched["stability_rule"] = {
+            "min_years": int(min_years),
+            "min_stable_year_share": float(min_stable_year_share),
+        }
+        enriched["hypothesis_label"] = "market_beating_segment_hypothesis"
+        candidates.append(enriched)
+    candidates.sort(key=lambda r: (r["weighted_log_loss_improvement"], -float(r.get("log_loss", 0.0))), reverse=True)
+    return {
+        "min_rows": int(min_rows),
+        "min_years": int(min_years),
+        "min_stable_year_share": float(min_stable_year_share),
+        "top_n": int(top_n),
+        "candidate_count": int(len(candidates)),
+        "excluded_low_sample_segments": int(excluded_low_sample_segments),
+        "excluded_unstable_segments": int(excluded_unstable_segments),
+        "top_segments": candidates[:top_n],
+        "note": "Research-only segment hypotheses from historical walk-forward rows; require multi-year stability and forward CLV/paper tracking before use.",
+    }
 
 
 def cluster_underperformance(preds: pd.DataFrame, prob_col: str, n_clusters: int = 8) -> list[dict]:
@@ -1481,6 +1617,8 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     paper_test_years = paper_test_years or ([min(test_years)] if test_years else [])
     grand_slam_benchmark = run_grand_slam_tournament_benchmark(data, paper_test_years)
     grand_slam_model_rows = grand_slam_benchmark.get("overall_model_comparison", []) if isinstance(grand_slam_benchmark, dict) else []
+    advanced_segments = segment_errors(preds, "advanced_features_p1")
+    residual_segments = segment_errors(preds, "residual_overlay_p1")
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "years": years,
@@ -1494,8 +1632,10 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "yearly_model_comparison": yearly,
         "grand_slam_tournament_expanding_benchmark": grand_slam_benchmark,
         "grand_slam_calibration_summary": summarize_calibration_diagnostics(grand_slam_model_rows, min_rows=20, top_n=12),
-        "where_advanced_underperforms_market": segment_errors(preds, "advanced_features_p1")[:40],
-        "where_residual_overlay_underperforms_market": segment_errors(preds, "residual_overlay_p1")[:40],
+        "where_advanced_underperforms_market": advanced_segments[:40],
+        "where_residual_overlay_underperforms_market": residual_segments[:40],
+        "where_advanced_beats_market": summarize_segment_strengths(advanced_segments, min_rows=150, top_n=12),
+        "where_residual_overlay_beats_market": summarize_segment_strengths(residual_segments, min_rows=150, top_n=12),
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
         "residual_overlay_underperformance_clusters": cluster_underperformance(preds, "residual_overlay_p1", n_clusters=8),
         "feature_notes": {
