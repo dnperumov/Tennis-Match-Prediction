@@ -23,6 +23,7 @@ from advanced_feature_model_research import (  # noqa: E402
     model_market_disagreement_segments,
     multivariate_segment_errors,
     no_lookahead_blend_weight_diagnostic,
+    no_lookahead_agreement_sizing_blend_diagnostic,
     no_lookahead_disagreement_margin_blend_diagnostic,
     no_lookahead_underperformance_risk_threshold_diagnostic,
     disagreement_margin_segments,
@@ -433,6 +434,43 @@ class CalibrationSummaryTest(unittest.TestCase):
             year_2023["blended_metrics"]["log_loss"],
             year_2023["model_metrics"]["log_loss"],
         )
+        self.assertLess(diagnostic["overall_blended_minus_model_log_loss"], 0.0)
+
+    def test_agreement_sizing_blend_uses_prior_year_agreement_buckets_only(self) -> None:
+        import pandas as pd
+
+        rows = []
+        # 2022 establishes that when model and market agree on p1 but the model is
+        # much more confident, shrinking to market is better. 2023 can use that
+        # prior-year bucket; disagreement rows and unsupported agreement buckets stay untouched.
+        for year in [2022, 2023]:
+            for i in range(20):
+                rows.append({
+                    "date": f"{year}-01-{(i % 9) + 1:02d}",
+                    "result": 0,
+                    "model_p1": 0.82,
+                    "implied_p1_no_vig": 0.56,
+                })
+            for i in range(10):
+                rows.append({
+                    "date": f"{year}-02-{(i % 9) + 1:02d}",
+                    "result": 1,
+                    "model_p1": 0.65,
+                    "implied_p1_no_vig": 0.45,
+                })
+
+        diagnostic = no_lookahead_agreement_sizing_blend_diagnostic(
+            pd.DataFrame(rows),
+            "model_p1",
+            candidate_weights=[0.0, 1.0],
+            min_train_rows=15,
+        )
+
+        self.assertEqual(diagnostic["routed_rows"], 20)
+        self.assertEqual(diagnostic["yearly"][0]["routed_rows"], 0)
+        self.assertEqual(diagnostic["yearly"][1]["routed_rows"], 20)
+        self.assertEqual(diagnostic["yearly"][1]["selected_segments"][0]["selected_model_weight"], 0.0)
+        self.assertLess(diagnostic["yearly"][1]["blended_metrics"]["log_loss"], diagnostic["yearly"][1]["model_metrics"]["log_loss"])
         self.assertLess(diagnostic["overall_blended_minus_model_log_loss"], 0.0)
 
     def test_no_lookahead_blend_weight_diagnostic_selects_weights_from_prior_years_only(self) -> None:

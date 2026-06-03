@@ -2079,6 +2079,142 @@ def _add_disagreement_margin_bucket_columns(
     return out
 
 
+def _add_agreement_sizing_bucket_columns(
+    df: pd.DataFrame,
+    model_prob_col: str,
+    baseline_prob_col: str = "implied_p1_no_vig",
+) -> pd.DataFrame:
+    """Add same-pick probability-sizing buckets for model/market agreement rows."""
+    out = df.copy()
+    out["_model_pick"] = (out[model_prob_col] >= 0.5).astype(int)
+    out["_market_pick"] = (out[baseline_prob_col] >= 0.5).astype(int)
+    out["_model_market_agree"] = out["_model_pick"] == out["_market_pick"]
+    out["model_market_agreement_pick"] = np.where(out["_model_pick"].eq(1), "both_pick_p1", "both_pick_p2")
+    out["model_market_abs_gap"] = (out[model_prob_col].astype(float) - out[baseline_prob_col].astype(float)).abs()
+    out["model_market_gap_bucket"] = pd.cut(
+        out["model_market_abs_gap"],
+        bins=[-np.inf, 0.03, 0.07, 0.12, 0.20, np.inf],
+        labels=["tiny_gap_lt3pct", "small_gap_3_7pct", "medium_gap_7_12pct", "large_gap_12_20pct", "huge_gap_gt20pct"],
+    ).astype(str)
+    out["model_market_agreement_pick__gap_bucket"] = _composite_segment_series(
+        out,
+        ["model_market_agreement_pick", "model_market_gap_bucket"],
+    )
+    return out
+
+
+def no_lookahead_agreement_sizing_blend_diagnostic(
+    preds: pd.DataFrame,
+    model_prob_col: str,
+    baseline_prob_col: str = "implied_p1_no_vig",
+    candidate_weights: list[float] | None = None,
+    min_train_rows: int = 120,
+) -> dict:
+    """Route same-pick rows with prior-year probability-sizing blend weights.
+
+    Disagreement-margin blending tests true model overrides. This companion keeps
+    only rows where model and market pick the same player, then selects a model
+    weight by prior OOS agreement-side + probability-gap bucket. It tests whether
+    residual damage is from over/under-sized probabilities even when side selection
+    agrees with the market. Research-only; no betting execution.
+    """
+    weights = [float(w) for w in (candidate_weights or [0.0, 0.10, 0.20, 0.35, 0.50, 0.65, 0.80, 1.0])]
+    blend_col = f"{model_prob_col}_agreement_sizing_blend"
+    empty = {
+        "model": model_prob_col,
+        "baseline_probability_col": baseline_prob_col,
+        "blended_probability_col": blend_col,
+        "candidate_weights": weights,
+        "min_train_rows": int(min_train_rows),
+        "routed_rows": 0,
+        "overall_model_metrics": None,
+        "overall_market_metrics": None,
+        "overall_blended_metrics": None,
+        "overall_blended_minus_market_log_loss": None,
+        "overall_blended_minus_market_brier": None,
+        "overall_blended_minus_model_log_loss": None,
+        "overall_blended_minus_model_brier": None,
+        "yearly": [],
+        "note": "No rows/date/probability columns available for no-lookahead agreement-sizing blend diagnostic.",
+    }
+    required = {"date", "result", model_prob_col, baseline_prob_col}
+    if preds.empty or not required.issubset(preds.columns):
+        return empty
+    df = _add_agreement_sizing_bucket_columns(preds, model_prob_col, baseline_prob_col)
+    df["_year"] = pd.to_datetime(df["date"], errors="coerce").dt.year
+    df = df.dropna(subset=["_year", "result", model_prob_col, baseline_prob_col]).copy()
+    if df.empty:
+        return empty
+    segment_col = "model_market_agreement_pick__gap_bucket"
+    df[blend_col] = df[model_prob_col].astype(float)
+    df["_agreement_blended"] = False
+    yearly = []
+    for year in sorted(int(y) for y in df["_year"].dropna().unique()):
+        train = df[(df["_year"] < year) & df["_model_market_agree"]].copy()
+        test_mask = df["_year"].eq(year)
+        selected_segments = []
+        if not train.empty:
+            for segment, tg in train.groupby(segment_col, dropna=False):
+                if len(tg) < min_train_rows:
+                    continue
+                candidates = []
+                for weight in weights:
+                    col = ((1.0 - weight) * tg[baseline_prob_col].astype(float) + weight * tg[model_prob_col].astype(float)).clip(1e-6, 1 - 1e-6)
+                    candidate_df = tg.assign(_candidate_blend=col)
+                    candidates.append({"model_weight": float(weight), "train_rows": int(len(tg)), **metrics_for(candidate_df, "_candidate_blend")})
+                best = min(candidates, key=lambda r: (r["log_loss"], r["brier"]))
+                year_segment_mask = test_mask & df["_model_market_agree"] & df[segment_col].eq(segment)
+                if bool(year_segment_mask.any()):
+                    weight = float(best["model_weight"])
+                    df.loc[year_segment_mask, blend_col] = (
+                        (1.0 - weight) * df.loc[year_segment_mask, baseline_prob_col].astype(float)
+                        + weight * df.loc[year_segment_mask, model_prob_col].astype(float)
+                    ).clip(1e-6, 1 - 1e-6)
+                    df.loc[year_segment_mask, "_agreement_blended"] = True
+                    selected_segments.append({
+                        "segment": str(segment),
+                        "train_rows": int(len(tg)),
+                        "test_rows": int(year_segment_mask.sum()),
+                        "selected_model_weight": weight,
+                        "train_candidates": candidates,
+                    })
+        year_df = df.loc[test_mask].copy()
+        model_m = metrics_for(year_df, model_prob_col)
+        blended_m = metrics_for(year_df, blend_col)
+        yearly.append({
+            "year": int(year),
+            "rows": int(len(year_df)),
+            "prior_oos_agreement_rows": int(len(train)),
+            "routed_rows": int((test_mask & df["_agreement_blended"]).sum()),
+            "selected_segments": selected_segments,
+            "model_metrics": model_m,
+            "market_metrics": metrics_for(year_df, baseline_prob_col),
+            "blended_metrics": blended_m,
+            "blended_minus_model_log_loss": float(blended_m["log_loss"] - model_m["log_loss"]),
+            "blended_minus_model_brier": float(blended_m["brier"] - model_m["brier"]),
+        })
+    model_m = metrics_for(df, model_prob_col)
+    market_m = metrics_for(df, baseline_prob_col)
+    blended_m = metrics_for(df, blend_col)
+    return {
+        "model": model_prob_col,
+        "baseline_probability_col": baseline_prob_col,
+        "blended_probability_col": blend_col,
+        "candidate_weights": weights,
+        "min_train_rows": int(min_train_rows),
+        "routed_rows": int(df["_agreement_blended"].sum()),
+        "overall_model_metrics": model_m,
+        "overall_market_metrics": market_m,
+        "overall_blended_metrics": blended_m,
+        "overall_blended_minus_market_log_loss": float(blended_m["log_loss"] - market_m["log_loss"]),
+        "overall_blended_minus_market_brier": float(blended_m["brier"] - market_m["brier"]),
+        "overall_blended_minus_model_log_loss": float(blended_m["log_loss"] - model_m["log_loss"]),
+        "overall_blended_minus_model_brier": float(blended_m["brier"] - model_m["brier"]),
+        "yearly": yearly,
+        "note": "Research-only no-lookahead policy: select model/market blend weights inside prior OOS model-market agreement side+gap buckets, then apply them only to future same-pick rows in matching buckets.",
+    }
+
+
 def no_lookahead_disagreement_margin_blend_diagnostic(
     preds: pd.DataFrame,
     model_prob_col: str,
@@ -2637,6 +2773,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     advanced_disagreement_margin_blend = no_lookahead_disagreement_margin_blend_diagnostic(preds, "advanced_features_p1")
     residual_disagreement_margin_blend = no_lookahead_disagreement_margin_blend_diagnostic(preds, "residual_overlay_p1")
     filtered_disagreement_margin_blend = no_lookahead_disagreement_margin_blend_diagnostic(preds, "residual_overlay_filtered_p1")
+    advanced_agreement_sizing_blend = no_lookahead_agreement_sizing_blend_diagnostic(preds, "advanced_features_p1")
+    residual_agreement_sizing_blend = no_lookahead_agreement_sizing_blend_diagnostic(preds, "residual_overlay_p1")
+    filtered_agreement_sizing_blend = no_lookahead_agreement_sizing_blend_diagnostic(preds, "residual_overlay_filtered_p1")
     residual_segment_tuned_risk_threshold = no_lookahead_underperformance_risk_threshold_diagnostic(preds, "residual_overlay_segment_tuned_p1")
     residual_overlay_risk_threshold = no_lookahead_underperformance_risk_threshold_diagnostic(preds, "residual_overlay_p1")
     report = {
@@ -2721,6 +2860,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "advanced_disagreement_margin_blend_diagnostic": advanced_disagreement_margin_blend,
         "residual_overlay_disagreement_margin_blend_diagnostic": residual_disagreement_margin_blend,
         "filtered_overlay_disagreement_margin_blend_diagnostic": filtered_disagreement_margin_blend,
+        "advanced_agreement_sizing_blend_diagnostic": advanced_agreement_sizing_blend,
+        "residual_overlay_agreement_sizing_blend_diagnostic": residual_agreement_sizing_blend,
+        "filtered_overlay_agreement_sizing_blend_diagnostic": filtered_agreement_sizing_blend,
         "residual_segment_tuned_underperformance_risk_threshold_diagnostic": residual_segment_tuned_risk_threshold,
         "residual_overlay_underperformance_risk_threshold_diagnostic": residual_overlay_risk_threshold,
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
@@ -2750,6 +2892,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "disagreement_fallback_routing": "no-lookahead diagnostic policy that uses only prior OOS years to identify stable model-damaging disagreement buckets and route those future bucket disagreements back to no-vig market probability",
             "prior_year_blend_weight": "diagnostic-only no-lookahead policy that selects a market/model blend weight from prior OOS years by log loss and applies it to the next held-out year; useful for testing whether feature probabilities should override market or mostly shrink to it",
             "disagreement_margin_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS model-vs-market disagreement direction+gap buckets, then applies those weights only to future override rows in matching buckets",
+            "agreement_sizing_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS same-pick side+gap buckets, then applies those weights only to future model-market agreement rows; useful for testing probability-sizing shrinkage separate from side-selection overrides",
             "clv": "live/pre-match odds snapshots and CLV storage are handled by scripts/odds_snapshot_store.py; not used in historical backtest until real snapshots exist",
         },
         "disclaimer": "Research only. No betting execution. Market-aware models use closing odds and must be adapted carefully for pre-match live odds/CLV tracking.",
