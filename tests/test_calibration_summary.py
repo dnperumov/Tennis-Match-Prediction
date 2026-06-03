@@ -26,6 +26,7 @@ from advanced_feature_model_research import (  # noqa: E402
     no_lookahead_disagreement_margin_blend_diagnostic,
     no_lookahead_underperformance_risk_threshold_diagnostic,
     disagreement_margin_segments,
+    player_involvement_segments,
     summarize_probability_quality_tradeoffs,
     summarize_segment_strengths,
     summarize_segment_weaknesses,
@@ -190,6 +191,53 @@ class CalibrationSummaryTest(unittest.TestCase):
             diagnostic["overall_routed_metrics"]["log_loss"],
             diagnostic["overall_market_metrics"]["log_loss"],
         )
+
+    def test_player_involvement_segments_scores_both_player_sides_with_year_stability(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023, 2024]:
+            for i in range(4):
+                rows.append({
+                    "date": f"{year}-01-{i + 1:02d}",
+                    "year": year,
+                    "player1": "Target A",
+                    "player2": f"Opponent {year}-{i}",
+                    "result": 0,
+                    "model_p1": 0.82,
+                    "implied_p1_no_vig": 0.55,
+                })
+                rows.append({
+                    "date": f"{year}-02-{i + 1:02d}",
+                    "year": year,
+                    "player1": f"Opponent B {year}-{i}",
+                    "player2": "Target A",
+                    "result": 1,
+                    "model_p1": 0.18,
+                    "implied_p1_no_vig": 0.45,
+                })
+        rows.append({
+            "date": "2024-03-01",
+            "year": 2024,
+            "player1": "Sparse Player",
+            "player2": "Other",
+            "result": 1,
+            "model_p1": 0.80,
+            "implied_p1_no_vig": 0.60,
+        })
+        preds = pd.DataFrame(rows)
+
+        segments = player_involvement_segments(preds, "model_p1", min_rows=6)
+
+        self.assertEqual(segments[0]["segment_col"], "player")
+        self.assertEqual(segments[0]["segment"], "Target A")
+        self.assertEqual(segments[0]["rows"], 24)
+        self.assertEqual(segments[0]["player_rows_as_p1"], 12)
+        self.assertEqual(segments[0]["player_rows_as_p2"], 12)
+        self.assertEqual(segments[0]["years"], [2022, 2023, 2024])
+        self.assertEqual(segments[0]["years_model_lags_market_log_loss"], 3)
+        self.assertGreater(segments[0]["model_minus_market_log_loss"], 0)
+        self.assertTrue(all(row["segment"] != "Sparse Player" for row in segments))
 
     def test_segment_errors_includes_rank_odds_rest_fatigue_and_context_buckets(self) -> None:
         import pandas as pd

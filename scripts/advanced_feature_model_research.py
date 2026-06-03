@@ -1393,6 +1393,38 @@ def segment_errors(preds: pd.DataFrame, prob_col: str) -> list[dict]:
     return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
 
 
+def player_involvement_segments(preds: pd.DataFrame, prob_col: str, min_rows: int = 80) -> list[dict]:
+    """Score model-vs-market quality for matches involving each player.
+
+    This is a reporting-only diagnostic: it does not claim a player-specific edge.
+    Instead, it finds recurring player contexts where the model's probability sizing
+    or side selection differs materially from the no-vig market across all OOS rows.
+    """
+    required = {"player1", "player2", "result", prob_col, "implied_p1_no_vig"}
+    if preds.empty or not required.issubset(preds.columns):
+        return []
+    df = preds.copy()
+    p1_rows = df.assign(player=df["player1"].astype(str), _player_side="p1")
+    p2_rows = df.assign(player=df["player2"].astype(str), _player_side="p2")
+    long = pd.concat([p1_rows, p2_rows], ignore_index=True)
+    rows = []
+    for player, g in long.groupby("player", dropna=False):
+        if len(g) < min_rows:
+            continue
+        m = metrics_for(g, prob_col)
+        rows.append({
+            "segment_col": "player",
+            "segment": str(player),
+            **m,
+            **segment_year_stability(g, prob_col),
+            "player_rows_as_p1": int(g["_player_side"].eq("p1").sum()),
+            "player_rows_as_p2": int(g["_player_side"].eq("p2").sum()),
+            "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
+            "model_minus_market_brier": float(m["brier"] - m["market_brier"]),
+        })
+    return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
+
+
 def model_market_disagreement_segments(
     preds: pd.DataFrame,
     prob_col: str,
@@ -2593,6 +2625,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     advanced_interaction_disagreement_segments = interaction_model_market_disagreement_segments(preds, "advanced_features_p1", min_rows=120)
     residual_interaction_disagreement_segments = interaction_model_market_disagreement_segments(preds, "residual_overlay_p1", min_rows=120)
     filtered_interaction_disagreement_segments = interaction_model_market_disagreement_segments(preds, "residual_overlay_filtered_p1", min_rows=120)
+    advanced_player_segments = player_involvement_segments(preds, "advanced_features_p1", min_rows=80)
+    residual_player_segments = player_involvement_segments(preds, "residual_overlay_p1", min_rows=80)
+    filtered_player_segments = player_involvement_segments(preds, "residual_overlay_filtered_p1", min_rows=80)
     advanced_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "advanced_features_p1")
     residual_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "residual_overlay_p1")
     filtered_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "residual_overlay_filtered_p1")
@@ -2659,6 +2694,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_interaction_disagreement_stably_lags_market": summarize_segment_weaknesses(advanced_interaction_disagreement_segments, min_rows=150, top_n=12),
         "where_residual_overlay_interaction_disagreement_stably_lags_market": summarize_segment_weaknesses(residual_interaction_disagreement_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_interaction_disagreement_stably_lags_market": summarize_segment_weaknesses(filtered_interaction_disagreement_segments, min_rows=150, top_n=12),
+        "where_advanced_player_context_stably_lags_market": summarize_segment_weaknesses(advanced_player_segments, min_rows=80, top_n=12),
+        "where_residual_overlay_player_context_stably_lags_market": summarize_segment_weaknesses(residual_player_segments, min_rows=80, top_n=12),
+        "where_filtered_overlay_player_context_stably_lags_market": summarize_segment_weaknesses(filtered_player_segments, min_rows=80, top_n=12),
         "where_advanced_disagreement_beats_market": summarize_segment_strengths(advanced_disagreement_segments, min_rows=150, top_n=12),
         "where_residual_overlay_disagreement_beats_market": summarize_segment_strengths(residual_disagreement_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_disagreement_beats_market": summarize_segment_strengths(filtered_disagreement_segments, min_rows=150, top_n=12),
@@ -2671,6 +2709,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_interaction_disagreement_beats_market": summarize_segment_strengths(advanced_interaction_disagreement_segments, min_rows=150, top_n=12),
         "where_residual_overlay_interaction_disagreement_beats_market": summarize_segment_strengths(residual_interaction_disagreement_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_interaction_disagreement_beats_market": summarize_segment_strengths(filtered_interaction_disagreement_segments, min_rows=150, top_n=12),
+        "where_advanced_player_context_beats_market": summarize_segment_strengths(advanced_player_segments, min_rows=80, top_n=12),
+        "where_residual_overlay_player_context_beats_market": summarize_segment_strengths(residual_player_segments, min_rows=80, top_n=12),
+        "where_filtered_overlay_player_context_beats_market": summarize_segment_strengths(filtered_player_segments, min_rows=80, top_n=12),
         "advanced_disagreement_fallback_routing_diagnostic": advanced_disagreement_fallback_routing,
         "residual_overlay_disagreement_fallback_routing_diagnostic": residual_disagreement_fallback_routing,
         "filtered_overlay_disagreement_fallback_routing_diagnostic": filtered_disagreement_fallback_routing,
@@ -2704,6 +2745,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "underperformance_filter": "predicts rows where advanced features are likely worse than market; filtered overlay falls back to market when risk is high; no-lookahead risk-threshold diagnostics test whether the fixed cutoff should be changed using only prior OOS years",
             "model_market_disagreement": "diagnostic-only scans of rows where a model flips the no-vig market favorite, including two-way interaction disagreement buckets; useful for separating true model overrides from rows where model and market already agree",
             "model_market_agreement_sizing": "diagnostic-only scans of rows where model and no-vig market pick the same player; isolates probability-sizing/overconfidence damage from true side-selection overrides",
+            "player_context_segments": "diagnostic-only player-involvement scan over all OOS rows where a player appears on either side; surfaces recurring player contexts where model probability quality stably lags or beats no-vig market, for feature-gap/routing research only",
             "disagreement_margin": "diagnostic-only model-vs-market override scan by probability-gap size and override direction; tests whether bigger model-market disagreements are safer signals or stable damage clusters",
             "disagreement_fallback_routing": "no-lookahead diagnostic policy that uses only prior OOS years to identify stable model-damaging disagreement buckets and route those future bucket disagreements back to no-vig market probability",
             "prior_year_blend_weight": "diagnostic-only no-lookahead policy that selects a market/model blend weight from prior OOS years by log loss and applies it to the next held-out year; useful for testing whether feature probabilities should override market or mostly shrink to it",
