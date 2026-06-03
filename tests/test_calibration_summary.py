@@ -22,6 +22,7 @@ from advanced_feature_model_research import (  # noqa: E402
     model_market_disagreement_segments,
     multivariate_segment_errors,
     no_lookahead_blend_weight_diagnostic,
+    disagreement_margin_segments,
     summarize_probability_quality_tradeoffs,
     summarize_segment_strengths,
     summarize_segment_weaknesses,
@@ -190,6 +191,35 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(segments_by_col["matches_last7_diff_bucket"], "p1_heavier_load")
         self.assertEqual(segments_by_col["surface_switch_any"], "True")
         self.assertEqual(segments_by_col["post_title_or_final_any"], "False")
+
+    def test_disagreement_margin_segments_scores_only_model_market_overrides_by_gap_bucket(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023, 2024]:
+            for i in range(60):
+                rows.append({
+                    "date": f"{year}-02-{(i % 9) + 1:02d}",
+                    "result": 1 if i % 3 else 0,
+                    "model_p1": 0.58,
+                    "implied_p1_no_vig": 0.47,
+                })
+            for i in range(20):
+                rows.append({
+                    "date": f"{year}-03-{(i % 9) + 1:02d}",
+                    "result": 1,
+                    "model_p1": 0.62,
+                    "implied_p1_no_vig": 0.51,
+                })
+
+        diagnostics = disagreement_margin_segments(pd.DataFrame(rows), "model_p1", min_rows=100)
+
+        by_col = {row["segment_col"]: row for row in diagnostics}
+        self.assertEqual(by_col["model_market_gap_bucket"]["segment"], "medium_gap_7_12pct")
+        self.assertEqual(by_col["model_market_gap_bucket"]["disagreement_rows"], 180)
+        self.assertEqual(by_col["model_market_gap_bucket"]["agreement_rows_excluded"], 60)
+        self.assertEqual(by_col["model_market_direction"]["segment"], "model_prefers_p1_market_prefers_p2")
+        self.assertEqual(by_col["model_market_gap_bucket"]["year_count"], 3)
 
     def test_segment_errors_adds_year_stability_diagnostics(self) -> None:
         import pandas as pd
