@@ -200,7 +200,9 @@ But the closing market remains extremely hard to beat. The current model should 
    - lucky loser
    - wildcard
    - protected ranking
+   - Implemented in the feature builder when optional draw columns such as `WEntry`/`LEntry`, `winner_entry`/`loser_entry`, or `Winner Entry`/`Loser Entry` are present; missing entry data safely remains all-zero.
 5. Add Challenger/current-form context for ATP250 early rounds.
+   - Implemented as no-lookahead rolling Challenger form/title features when Challenger rows are included in the input feed; the current tennis-data ATP-only feed still has no Challenger source rows, so these remain neutral until that ETL is added.
 6. Add withdrawal/retirement/injury flags.
 7. Paper-track only these model families:
    - `market_no_vig`

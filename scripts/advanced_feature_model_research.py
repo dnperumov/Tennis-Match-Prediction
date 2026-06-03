@@ -139,6 +139,65 @@ def haversine_km(a_lat: float, a_lon: float, b_lat: float, b_lon: float) -> floa
     return 2 * r * math.asin(math.sqrt(x))
 
 
+ENTRY_CODE_MAP = {
+    "Q": "qualifier",
+    "QUALIFIER": "qualifier",
+    "QUALIFYING": "qualifier",
+    "WC": "wildcard",
+    "WILD CARD": "wildcard",
+    "WILDCARD": "wildcard",
+    "LL": "lucky_loser",
+    "LUCKY LOSER": "lucky_loser",
+    "LUCKY-LOSER": "lucky_loser",
+    "PR": "protected_ranking",
+    "PROTECTED RANKING": "protected_ranking",
+    "PROTECTED RANK": "protected_ranking",
+}
+
+
+def normalize_entry_code(value) -> str | None:
+    if pd.isna(value):
+        return None
+    text = str(value).strip().upper().replace(".", "")
+    if not text or text in {"NAN", "NONE", "DIRECT", "DA", "MAIN DRAW"}:
+        return None
+    return ENTRY_CODE_MAP.get(text)
+
+
+def entry_from_match_row(m: pd.Series, side: str):
+    """Return optional winner/loser entry code from common draw-data column names."""
+    side = side.upper()
+    candidates = [
+        f"{side}Entry",
+        f"{side}_Entry",
+        f"{side}entry",
+        f"{side.lower()}_entry",
+        "winner_entry" if side == "W" else "loser_entry",
+        "WinnerEntry" if side == "W" else "LoserEntry",
+        "Winner Entry" if side == "W" else "Loser Entry",
+    ]
+    for col in candidates:
+        if col in m.index and pd.notna(m.get(col)):
+            return m.get(col)
+    return None
+
+
+def side_entry_flags(p1_entry, p2_entry) -> dict[str, int]:
+    p1_kind = normalize_entry_code(p1_entry)
+    p2_kind = normalize_entry_code(p2_entry)
+    row: dict[str, int] = {}
+    for kind in ["qualifier", "wildcard", "lucky_loser", "protected_ranking"]:
+        row[f"p1_{kind}"] = int(p1_kind == kind)
+        row[f"p2_{kind}"] = int(p2_kind == kind)
+        row[f"{kind}_diff"] = row[f"p1_{kind}"] - row[f"p2_{kind}"]
+    return row
+
+
+def is_challenger_context(series: str, tourney: str) -> bool:
+    text = f"{series} {tourney}".lower()
+    return "challenger" in text
+
+
 @dataclass
 class AdvState:
     wins: int = 0
@@ -173,6 +232,9 @@ class AdvState:
     games_lost: float = 0.0
     tiebreak_sets: int = 0
     straight_set_wins: int = 0
+    challenger_wins: int = 0
+    challenger_matches: int = 0
+    last_challenger_title_date: pd.Timestamp | None = None
 
     def pct(self, wins: int, matches: int, default: float = 0.5) -> float:
         return wins / matches if matches else default
@@ -236,6 +298,14 @@ class AdvState:
     def straight_set_win_rate(self) -> float:
         return self.straight_set_wins / self.matches if self.matches else 0.0
 
+    def challenger_form(self) -> float:
+        return self.challenger_wins / self.challenger_matches if self.challenger_matches else 0.5
+
+    def days_since_challenger_title(self, date: pd.Timestamp) -> float:
+        if self.last_challenger_title_date is None:
+            return np.nan
+        return float((date - self.last_challenger_title_date).days)
+
     def travel_from_last(self, location: str) -> tuple[float, int, int]:
         if self.last_location is None:
             return 0.0, 0, 0
@@ -259,6 +329,11 @@ class AdvState:
         if is_bo5:
             self.bo5_matches += 1
             self.bo5_wins += won
+        if is_challenger_context(series, tourney):
+            self.challenger_matches += 1
+            self.challenger_wins += won
+            if won and is_final(round_value):
+                self.last_challenger_title_date = date
         if pd.notna(opp_rank) and opp_rank <= 10:
             self.vs_top10_matches += 1
             self.vs_top10_wins += won
@@ -330,6 +405,8 @@ def add_advanced_side_dataset(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
             w_games, l_games, tiebreaks = game_totals(m)
             comment = str(m.get("Comment", ""))
             retired = "retired" in comment.lower() or "walkover" in comment.lower()
+            w_entry = entry_from_match_row(m, "W")
+            l_entry = entry_from_match_row(m, "L")
             loc_lat, loc_lon, loc_country, loc_continent = location_meta(location)
             th = tournament_history[(tourney, surface, round_group(round_value))]
             tournament_favorite_win_rate = th["favorite_wins"] / th["matches"] if th["matches"] else 0.5
@@ -339,6 +416,8 @@ def add_advanced_side_dataset(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
             p1_is_winner = int(p1 == winner)
             p1_rank = w_rank if p1 == winner else l_rank
             p2_rank = l_rank if p1 == winner else w_rank
+            p1_entry = w_entry if p1 == winner else l_entry
+            p2_entry = l_entry if p1 == winner else w_entry
             p1_pts = w_pts if p1 == winner else l_pts
             p2_pts = l_pts if p1 == winner else w_pts
             p1_odds = float(m["B365W"] if p1 == winner else m["B365L"])
@@ -360,6 +439,8 @@ def add_advanced_side_dataset(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
             p2_travel_km, p2_country_switch, p2_continent_switch = s2.travel_from_last(location)
             p1_days_retired = s1.days_since_retirement(date)
             p2_days_retired = s2.days_since_retirement(date)
+            p1_days_challenger_title = s1.days_since_challenger_title(date)
+            p2_days_challenger_title = s2.days_since_challenger_title(date)
             is_early = int(round_group(round_value) == "early")
             row = {
                 "date": date,
@@ -483,14 +564,13 @@ def add_advanced_side_dataset(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
                 "continent_switch_diff": p1_continent_switch - p2_continent_switch,
                 "p1_title_and_continent_switch": int(pd.notna(p1_days_title) and 0 < p1_days_title <= 14 and p1_continent_switch),
                 "p2_title_and_continent_switch": int(pd.notna(p2_days_title) and 0 < p2_days_title <= 14 and p2_continent_switch),
-                # Entry-context placeholders. Fill from external draw/entry data when available.
-                "p1_qualifier": 0, "p2_qualifier": 0, "qualifier_diff": 0,
-                "p1_wildcard": 0, "p2_wildcard": 0, "wildcard_diff": 0,
-                "p1_lucky_loser": 0, "p2_lucky_loser": 0, "lucky_loser_diff": 0,
-                "p1_protected_ranking": 0, "p2_protected_ranking": 0, "protected_ranking_diff": 0,
-                # Challenger/lower-tour placeholders. Fill from Challenger ETL when available.
-                "p1_challenger_form": 0.5, "p2_challenger_form": 0.5, "challenger_form_diff": 0.0,
-                "p1_challenger_title_30d": 0, "p2_challenger_title_30d": 0, "challenger_title_30d_diff": 0,
+                # Entry context from optional draw columns (WEntry/LEntry, winner_entry/loser_entry, etc.).
+                **side_entry_flags(p1_entry, p2_entry),
+                # Challenger/lower-tour context from prior rows when those rows are present in the input feed.
+                "p1_challenger_form": s1.challenger_form(), "p2_challenger_form": s2.challenger_form(), "challenger_form_diff": s1.challenger_form() - s2.challenger_form(),
+                "p1_challenger_title_30d": int(pd.notna(p1_days_challenger_title) and 0 < p1_days_challenger_title <= 30),
+                "p2_challenger_title_30d": int(pd.notna(p2_days_challenger_title) and 0 < p2_days_challenger_title <= 30),
+                "challenger_title_30d_diff": int(pd.notna(p1_days_challenger_title) and 0 < p1_days_challenger_title <= 30) - int(pd.notna(p2_days_challenger_title) and 0 < p2_days_challenger_title <= 30),
                 # Injury/withdrawal proxy features from prior comments and layoffs.
                 "p1_retired_within_30": int(pd.notna(p1_days_retired) and 0 < p1_days_retired <= 30),
                 "p2_retired_within_30": int(pd.notna(p2_days_retired) and 0 < p2_days_retired <= 30),
@@ -1829,6 +1909,116 @@ def no_lookahead_blend_weight_diagnostic(
     }
 
 
+def no_lookahead_underperformance_risk_threshold_diagnostic(
+    preds: pd.DataFrame,
+    model_prob_col: str,
+    risk_col: str = "underperformance_risk",
+    baseline_prob_col: str = "implied_p1_no_vig",
+    candidate_thresholds: list[float] | None = None,
+    min_train_rows: int = 1500,
+) -> dict:
+    """Select an underperformance-risk fallback threshold using prior OOS years only.
+
+    The production filtered overlay currently uses a fixed risk cutoff. This
+    diagnostic treats that cutoff as a routing policy: for each held-out year, use
+    only earlier out-of-sample rows to choose the risk threshold that minimizes log
+    loss, then route current-year rows with risk >= threshold back to the no-vig
+    market/baseline probability. It is research-only and never changes live
+    financial behavior.
+    """
+    thresholds = [float(t) for t in (candidate_thresholds or [0.0, 0.40, 0.50, 0.60, 0.65, 0.70, 0.80, 0.90, 1.0])]
+    routed_col = f"{model_prob_col}_underperformance_risk_threshold"
+    empty = {
+        "model": model_prob_col,
+        "risk_col": risk_col,
+        "baseline_probability_col": baseline_prob_col,
+        "routed_probability_col": routed_col,
+        "candidate_thresholds": thresholds,
+        "min_train_rows": int(min_train_rows),
+        "routed_rows": 0,
+        "overall_model_metrics": None,
+        "overall_market_metrics": None,
+        "overall_routed_metrics": None,
+        "overall_routed_minus_market_log_loss": None,
+        "overall_routed_minus_model_log_loss": None,
+        "yearly": [],
+        "note": "No rows/date/probability/risk columns available for no-lookahead underperformance-risk threshold diagnostic.",
+    }
+    required = {"date", "result", model_prob_col, baseline_prob_col, risk_col}
+    if preds.empty or not required.issubset(preds.columns):
+        return empty
+    df = preds.copy()
+    df["_year"] = pd.to_datetime(df["date"], errors="coerce").dt.year
+    df = df.dropna(subset=["_year", "result", model_prob_col, baseline_prob_col, risk_col]).copy()
+    if df.empty:
+        return empty
+    df[routed_col] = df[model_prob_col].astype(float)
+    df["_risk_routed_to_market"] = False
+    yearly = []
+    for year in sorted(int(y) for y in df["_year"].dropna().unique()):
+        train = df[df["_year"] < year].copy()
+        test_mask = df["_year"].eq(year)
+        selected_threshold = 1.0
+        train_candidates = []
+        if len(train) >= min_train_rows:
+            for threshold in thresholds:
+                col = train[model_prob_col].where(
+                    train[risk_col].astype(float) < threshold,
+                    train[baseline_prob_col].astype(float),
+                ).clip(1e-6, 1 - 1e-6)
+                candidate_df = train.assign(_candidate_risk_routed=col)
+                routed_rows = int((train[risk_col].astype(float) >= threshold).sum())
+                train_candidates.append({
+                    "threshold": float(threshold),
+                    "train_rows": int(len(train)),
+                    "routed_rows": routed_rows,
+                    **metrics_for(candidate_df, "_candidate_risk_routed"),
+                })
+            best = min(train_candidates, key=lambda r: (r["log_loss"], r["brier"], -r["threshold"]))
+            selected_threshold = float(best["threshold"])
+        year_route_mask = test_mask & (df[risk_col].astype(float) >= selected_threshold)
+        df.loc[year_route_mask, routed_col] = df.loc[year_route_mask, baseline_prob_col].astype(float)
+        df.loc[year_route_mask, "_risk_routed_to_market"] = True
+        year_df = df.loc[test_mask].copy()
+        model_m = metrics_for(year_df, model_prob_col)
+        routed_m = metrics_for(year_df, routed_col)
+        yearly.append({
+            "year": int(year),
+            "rows": int(len(year_df)),
+            "prior_oos_train_rows": int(len(train)),
+            "selected_threshold": float(selected_threshold),
+            "routed_rows": int(year_route_mask.sum()),
+            "train_candidates": train_candidates,
+            "model_metrics": model_m,
+            "market_metrics": metrics_for(year_df, baseline_prob_col),
+            "routed_metrics": routed_m,
+            "routed_minus_model_log_loss": float(routed_m["log_loss"] - model_m["log_loss"]),
+            "routed_minus_model_brier": float(routed_m["brier"] - model_m["brier"]),
+        })
+    model_m = metrics_for(df, model_prob_col)
+    market_m = metrics_for(df, baseline_prob_col)
+    routed_m = metrics_for(df, routed_col)
+    return {
+        "model": model_prob_col,
+        "risk_col": risk_col,
+        "baseline_probability_col": baseline_prob_col,
+        "routed_probability_col": routed_col,
+        "candidate_thresholds": thresholds,
+        "min_train_rows": int(min_train_rows),
+        "routed_rows": int(df["_risk_routed_to_market"].sum()),
+        "overall_model_metrics": model_m,
+        "overall_market_metrics": market_m,
+        "overall_routed_metrics": routed_m,
+        "overall_routed_minus_market_log_loss": float(routed_m["log_loss"] - market_m["log_loss"]),
+        "overall_routed_minus_market_brier": float(routed_m["brier"] - market_m["brier"]),
+        "overall_routed_minus_model_log_loss": float(routed_m["log_loss"] - model_m["log_loss"]),
+        "overall_routed_minus_model_brier": float(routed_m["brier"] - model_m["brier"]),
+        "yearly": yearly,
+        "note": "Research-only no-lookahead policy: select an underperformance-risk fallback threshold from prior OOS years, then route future high-risk rows back to the no-vig market/baseline probability.",
+    }
+
+
+
 def _add_disagreement_margin_bucket_columns(
     df: pd.DataFrame,
     model_prob_col: str,
@@ -2412,6 +2602,8 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     advanced_disagreement_margin_blend = no_lookahead_disagreement_margin_blend_diagnostic(preds, "advanced_features_p1")
     residual_disagreement_margin_blend = no_lookahead_disagreement_margin_blend_diagnostic(preds, "residual_overlay_p1")
     filtered_disagreement_margin_blend = no_lookahead_disagreement_margin_blend_diagnostic(preds, "residual_overlay_filtered_p1")
+    residual_segment_tuned_risk_threshold = no_lookahead_underperformance_risk_threshold_diagnostic(preds, "residual_overlay_segment_tuned_p1")
+    residual_overlay_risk_threshold = no_lookahead_underperformance_risk_threshold_diagnostic(preds, "residual_overlay_p1")
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "years": years,
@@ -2488,6 +2680,8 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "advanced_disagreement_margin_blend_diagnostic": advanced_disagreement_margin_blend,
         "residual_overlay_disagreement_margin_blend_diagnostic": residual_disagreement_margin_blend,
         "filtered_overlay_disagreement_margin_blend_diagnostic": filtered_disagreement_margin_blend,
+        "residual_segment_tuned_underperformance_risk_threshold_diagnostic": residual_segment_tuned_risk_threshold,
+        "residual_overlay_underperformance_risk_threshold_diagnostic": residual_overlay_risk_threshold,
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
         "residual_overlay_underperformance_clusters": cluster_underperformance(preds, "residual_overlay_p1", n_clusters=8),
         "feature_notes": {
@@ -2507,7 +2701,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "paper_benchmark": "Grand Slam-only train-before-tournament expanding-window benchmark compares market, logistic, spline-logistic, random forest, XGBoost, linear SVM, advanced voting, and residual overlay with accuracy/log-loss/Brier",
             "statistically_enhanced_abilities": "pre-match ability covariates are estimated only from prior matches: surface ability, score-derived serve/return proxy, best-of-five/Slam ability, recent form ability, and fatigue-adjusted ability",
             "residual_overlay": "fits result - no-vig-market as target, applies segment-tuned shrinkage, and uses specialist residual models in early ATP250, post-title/final, surface-switch, Grand Slam, top10, and early-surface-switch buckets",
-            "underperformance_filter": "predicts rows where advanced features are likely worse than market; filtered overlay falls back to market when risk is high",
+            "underperformance_filter": "predicts rows where advanced features are likely worse than market; filtered overlay falls back to market when risk is high; no-lookahead risk-threshold diagnostics test whether the fixed cutoff should be changed using only prior OOS years",
             "model_market_disagreement": "diagnostic-only scans of rows where a model flips the no-vig market favorite, including two-way interaction disagreement buckets; useful for separating true model overrides from rows where model and market already agree",
             "model_market_agreement_sizing": "diagnostic-only scans of rows where model and no-vig market pick the same player; isolates probability-sizing/overconfidence damage from true side-selection overrides",
             "disagreement_margin": "diagnostic-only model-vs-market override scan by probability-gap size and override direction; tests whether bigger model-market disagreements are safer signals or stable damage clusters",

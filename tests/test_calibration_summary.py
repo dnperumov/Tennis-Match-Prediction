@@ -24,6 +24,7 @@ from advanced_feature_model_research import (  # noqa: E402
     multivariate_segment_errors,
     no_lookahead_blend_weight_diagnostic,
     no_lookahead_disagreement_margin_blend_diagnostic,
+    no_lookahead_underperformance_risk_threshold_diagnostic,
     disagreement_margin_segments,
     summarize_probability_quality_tradeoffs,
     summarize_segment_strengths,
@@ -153,6 +154,41 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(
             summary["warning"],
             "accuracy leader is not the log-loss leader; prioritize calibrated probability quality over accuracy-only gains",
+        )
+
+    def test_underperformance_risk_threshold_uses_prior_oos_years_only(self) -> None:
+        import pandas as pd
+
+        preds = pd.DataFrame({
+            "date": pd.to_datetime([
+                "2022-01-01", "2022-01-02", "2022-01-03", "2022-01-04",
+                "2023-01-01", "2023-01-02", "2023-01-03", "2023-01-04",
+            ]),
+            "result": [1, 0, 1, 0, 1, 0, 1, 0],
+            "model_p1": [0.90, 0.10, 0.90, 0.10, 0.90, 0.10, 0.90, 0.10],
+            "market_p1": [0.55, 0.45, 0.55, 0.45, 0.55, 0.45, 0.55, 0.45],
+            "implied_p1_no_vig": [0.55, 0.45, 0.55, 0.45, 0.55, 0.45, 0.55, 0.45],
+            "risk": [0.20, 0.20, 0.90, 0.90, 0.20, 0.20, 0.90, 0.90],
+        })
+
+        diagnostic = no_lookahead_underperformance_risk_threshold_diagnostic(
+            preds,
+            model_prob_col="model_p1",
+            risk_col="risk",
+            baseline_prob_col="market_p1",
+            candidate_thresholds=[0.0, 0.5, 1.0],
+            min_train_rows=4,
+        )
+
+        self.assertEqual(diagnostic["yearly"][0]["selected_threshold"], 1.0)
+        self.assertEqual(diagnostic["yearly"][0]["prior_oos_train_rows"], 0)
+        self.assertEqual(diagnostic["yearly"][1]["selected_threshold"], 1.0)
+        self.assertEqual(diagnostic["yearly"][1]["prior_oos_train_rows"], 4)
+        self.assertEqual(diagnostic["routed_probability_col"], "model_p1_underperformance_risk_threshold")
+        self.assertEqual(diagnostic["overall_routed_metrics"]["rows"], 8)
+        self.assertLess(
+            diagnostic["overall_routed_metrics"]["log_loss"],
+            diagnostic["overall_market_metrics"]["log_loss"],
         )
 
     def test_segment_errors_includes_rank_odds_rest_fatigue_and_context_buckets(self) -> None:
