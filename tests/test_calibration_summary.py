@@ -22,6 +22,7 @@ from advanced_feature_model_research import (  # noqa: E402
     model_market_disagreement_segments,
     multivariate_segment_errors,
     no_lookahead_blend_weight_diagnostic,
+    no_lookahead_disagreement_margin_blend_diagnostic,
     disagreement_margin_segments,
     summarize_probability_quality_tradeoffs,
     summarize_segment_strengths,
@@ -251,6 +252,60 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(grass["min_year_rows"], 90)
         self.assertEqual(grass["years_model_beats_market_log_loss"], 3)
         self.assertEqual(grass["years_model_beats_market_brier"], 3)
+
+    def test_no_lookahead_disagreement_margin_blend_uses_prior_bucket_weights_only(self) -> None:
+        import pandas as pd
+
+        rows = []
+        # 2022 teaches the medium-gap/model-prefers-p1 override bucket is harmful;
+        # the 2023 same-bucket rows should be shrunk to market, while the first year
+        # and agreement rows keep the model probability.
+        for i in range(80):
+            rows.append({
+                "date": "2022-01-01",
+                "result": 0,
+                "model_p1": 0.58,
+                "implied_p1_no_vig": 0.47,
+            })
+        for i in range(40):
+            rows.append({
+                "date": "2022-01-02",
+                "result": 1,
+                "model_p1": 0.64,
+                "implied_p1_no_vig": 0.70,
+            })
+        for i in range(20):
+            rows.append({
+                "date": "2023-01-01",
+                "result": 0,
+                "model_p1": 0.58,
+                "implied_p1_no_vig": 0.47,
+            })
+        for i in range(10):
+            rows.append({
+                "date": "2023-01-02",
+                "result": 1,
+                "model_p1": 0.64,
+                "implied_p1_no_vig": 0.70,
+            })
+
+        diagnostic = no_lookahead_disagreement_margin_blend_diagnostic(
+            pd.DataFrame(rows),
+            "model_p1",
+            candidate_weights=[0.0, 1.0],
+            min_train_rows=50,
+        )
+
+        self.assertEqual(diagnostic["routed_rows"], 20)
+        year_2022, year_2023 = diagnostic["yearly"]
+        self.assertEqual(year_2022["routed_rows"], 0)
+        self.assertEqual(year_2023["routed_rows"], 20)
+        self.assertEqual(year_2023["selected_segments"][0]["selected_model_weight"], 0.0)
+        self.assertLess(
+            year_2023["blended_metrics"]["log_loss"],
+            year_2023["model_metrics"]["log_loss"],
+        )
+        self.assertLess(diagnostic["overall_blended_minus_model_log_loss"], 0.0)
 
     def test_no_lookahead_blend_weight_diagnostic_selects_weights_from_prior_years_only(self) -> None:
         import pandas as pd
