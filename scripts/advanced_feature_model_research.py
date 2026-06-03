@@ -1622,6 +1622,107 @@ def disagreement_fallback_routing_diagnostic(
     }
 
 
+def no_lookahead_blend_weight_diagnostic(
+    preds: pd.DataFrame,
+    model_prob_col: str,
+    baseline_prob_col: str = "implied_p1_no_vig",
+    candidate_weights: list[float] | None = None,
+    min_train_rows: int = 1500,
+) -> dict:
+    """Select market/model blend weights using only prior OOS years.
+
+    Weight is the share assigned to ``model_prob_col``; ``0.0`` means pure
+    no-vig market baseline and ``1.0`` means pure model. This is a diagnostic
+    policy test, not live model selection: each test year can only use earlier
+    out-of-sample rows to pick the weight that minimized log loss historically.
+    """
+    weights = [float(w) for w in (candidate_weights or [0.0, 0.10, 0.20, 0.25, 0.35, 0.50, 0.65, 0.75, 0.90, 1.0])]
+    empty = {
+        "model": model_prob_col,
+        "baseline_probability_col": baseline_prob_col,
+        "blended_probability_col": f"{model_prob_col}_prior_year_blend",
+        "candidate_weights": weights,
+        "min_train_rows": int(min_train_rows),
+        "overall_model_metrics": None,
+        "overall_market_metrics": None,
+        "overall_blended_metrics": None,
+        "overall_oracle_best_weight_metrics": None,
+        "overall_blended_minus_market_log_loss": None,
+        "overall_blended_minus_model_log_loss": None,
+        "yearly": [],
+        "note": "No rows/date/probability columns available for no-lookahead blend-weight diagnostic.",
+    }
+    required = {"date", "result", model_prob_col, baseline_prob_col}
+    if preds.empty or not required.issubset(preds.columns):
+        return empty
+    df = preds.copy()
+    df["_year"] = pd.to_datetime(df["date"], errors="coerce").dt.year
+    df = df.dropna(subset=["_year", "result", model_prob_col, baseline_prob_col]).copy()
+    if df.empty:
+        return empty
+    blend_col = f"{model_prob_col}_prior_year_blend"
+    oracle_col = f"{model_prob_col}_oracle_best_blend"
+    df[blend_col] = df[baseline_prob_col].astype(float)
+    yearly = []
+    for year in sorted(int(y) for y in df["_year"].dropna().unique()):
+        train = df[df["_year"] < year].copy()
+        test_mask = df["_year"].eq(year)
+        selected_weight = 0.0
+        train_candidates = []
+        if len(train) >= min_train_rows:
+            for weight in weights:
+                col = (1.0 - weight) * train[baseline_prob_col].astype(float) + weight * train[model_prob_col].astype(float)
+                candidate_df = train.assign(_candidate_blend=col.clip(1e-6, 1 - 1e-6))
+                m = metrics_for(candidate_df, "_candidate_blend")
+                train_candidates.append({"model_weight": float(weight), "train_rows": int(len(train)), **m})
+            best = min(train_candidates, key=lambda r: (r["log_loss"], r["brier"]))
+            selected_weight = float(best["model_weight"])
+        df.loc[test_mask, blend_col] = (
+            (1.0 - selected_weight) * df.loc[test_mask, baseline_prob_col].astype(float)
+            + selected_weight * df.loc[test_mask, model_prob_col].astype(float)
+        ).clip(1e-6, 1 - 1e-6)
+        year_df = df.loc[test_mask].copy()
+        yearly.append({
+            "year": int(year),
+            "rows": int(len(year_df)),
+            "prior_oos_train_rows": int(len(train)),
+            "selected_model_weight": float(selected_weight),
+            "train_candidates": train_candidates,
+            "model_metrics": metrics_for(year_df, model_prob_col),
+            "market_metrics": metrics_for(year_df, baseline_prob_col),
+            "blended_metrics": metrics_for(year_df, blend_col),
+        })
+    oracle_candidates = []
+    for weight in weights:
+        col = ((1.0 - weight) * df[baseline_prob_col].astype(float) + weight * df[model_prob_col].astype(float)).clip(1e-6, 1 - 1e-6)
+        candidate_df = df.assign(_candidate_blend=col)
+        oracle_candidates.append({"model_weight": float(weight), **metrics_for(candidate_df, "_candidate_blend")})
+    oracle_best = min(oracle_candidates, key=lambda r: (r["log_loss"], r["brier"]))
+    df[oracle_col] = ((1.0 - oracle_best["model_weight"]) * df[baseline_prob_col].astype(float) + oracle_best["model_weight"] * df[model_prob_col].astype(float)).clip(1e-6, 1 - 1e-6)
+    model_m = metrics_for(df, model_prob_col)
+    market_m = metrics_for(df, baseline_prob_col)
+    blended_m = metrics_for(df, blend_col)
+    oracle_m = metrics_for(df, oracle_col)
+    return {
+        "model": model_prob_col,
+        "baseline_probability_col": baseline_prob_col,
+        "blended_probability_col": blend_col,
+        "candidate_weights": weights,
+        "min_train_rows": int(min_train_rows),
+        "overall_model_metrics": model_m,
+        "overall_market_metrics": market_m,
+        "overall_blended_metrics": blended_m,
+        "overall_oracle_best_weight": float(oracle_best["model_weight"]),
+        "overall_oracle_best_weight_metrics": oracle_m,
+        "overall_blended_minus_market_log_loss": float(blended_m["log_loss"] - market_m["log_loss"]),
+        "overall_blended_minus_market_brier": float(blended_m["brier"] - market_m["brier"]),
+        "overall_blended_minus_model_log_loss": float(blended_m["log_loss"] - model_m["log_loss"]),
+        "overall_blended_minus_model_brier": float(blended_m["brier"] - model_m["brier"]),
+        "yearly": yearly,
+        "note": "Research-only no-lookahead policy: select market/model blend weight from prior out-of-sample years, then apply it to the next held-out year.",
+    }
+
+
 DEFAULT_MULTIVARIATE_SEGMENT_GROUPS = [
     ("series", "round_group", "rank_diff_bucket"),
     ("series", "round_group", "market_prob_bucket"),
@@ -2053,6 +2154,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     advanced_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "advanced_features_p1")
     residual_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "residual_overlay_p1")
     filtered_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "residual_overlay_filtered_p1")
+    advanced_prior_year_blend_weight = no_lookahead_blend_weight_diagnostic(preds, "advanced_features_p1")
+    residual_prior_year_blend_weight = no_lookahead_blend_weight_diagnostic(preds, "residual_overlay_p1")
+    filtered_prior_year_blend_weight = no_lookahead_blend_weight_diagnostic(preds, "residual_overlay_filtered_p1")
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "years": years,
@@ -2105,6 +2209,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "advanced_disagreement_fallback_routing_diagnostic": advanced_disagreement_fallback_routing,
         "residual_overlay_disagreement_fallback_routing_diagnostic": residual_disagreement_fallback_routing,
         "filtered_overlay_disagreement_fallback_routing_diagnostic": filtered_disagreement_fallback_routing,
+        "advanced_prior_year_blend_weight_diagnostic": advanced_prior_year_blend_weight,
+        "residual_overlay_prior_year_blend_weight_diagnostic": residual_prior_year_blend_weight,
+        "filtered_overlay_prior_year_blend_weight_diagnostic": filtered_prior_year_blend_weight,
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
         "residual_overlay_underperformance_clusters": cluster_underperformance(preds, "residual_overlay_p1", n_clusters=8),
         "feature_notes": {
@@ -2127,6 +2234,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "underperformance_filter": "predicts rows where advanced features are likely worse than market; filtered overlay falls back to market when risk is high",
             "model_market_disagreement": "diagnostic-only scans of rows where a model flips the no-vig market favorite, including two-way interaction disagreement buckets; useful for separating true model overrides from rows where model and market already agree",
             "disagreement_fallback_routing": "no-lookahead diagnostic policy that uses only prior OOS years to identify stable model-damaging disagreement buckets and route those future bucket disagreements back to no-vig market probability",
+            "prior_year_blend_weight": "diagnostic-only no-lookahead policy that selects a market/model blend weight from prior OOS years by log loss and applies it to the next held-out year; useful for testing whether feature probabilities should override market or mostly shrink to it",
             "clv": "live/pre-match odds snapshots and CLV storage are handled by scripts/odds_snapshot_store.py; not used in historical backtest until real snapshots exist",
         },
         "disclaimer": "Research only. No betting execution. Market-aware models use closing odds and must be adapted carefully for pre-match live odds/CLV tracking.",

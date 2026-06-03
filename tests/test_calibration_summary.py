@@ -21,6 +21,7 @@ from advanced_feature_model_research import (  # noqa: E402
     interaction_model_market_disagreement_segments,
     model_market_disagreement_segments,
     multivariate_segment_errors,
+    no_lookahead_blend_weight_diagnostic,
     summarize_probability_quality_tradeoffs,
     summarize_segment_strengths,
     summarize_segment_weaknesses,
@@ -220,6 +221,55 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(grass["min_year_rows"], 90)
         self.assertEqual(grass["years_model_beats_market_log_loss"], 3)
         self.assertEqual(grass["years_model_beats_market_brier"], 3)
+
+    def test_no_lookahead_blend_weight_diagnostic_selects_weights_from_prior_years_only(self) -> None:
+        import pandas as pd
+
+        rows = []
+        # 2022 shows the feature model is better than market, so 2023 may blend toward it.
+        for i in range(20):
+            result = 1 if i % 2 else 0
+            rows.append({
+                "date": f"2022-01-{(i % 9) + 1:02d}",
+                "result": result,
+                "model_p1": 0.80 if result else 0.20,
+                "implied_p1_no_vig": 0.55 if result else 0.45,
+            })
+        # 2023 has the same pattern; the policy should use the prior-year-selected model weight.
+        for i in range(20):
+            result = 1 if i % 2 else 0
+            rows.append({
+                "date": f"2023-01-{(i % 9) + 1:02d}",
+                "result": result,
+                "model_p1": 0.80 if result else 0.20,
+                "implied_p1_no_vig": 0.55 if result else 0.45,
+            })
+        # 2024 reverses; the weight is still selected from prior OOS rows, not 2024 leakage.
+        for i in range(20):
+            result = 1 if i % 2 else 0
+            rows.append({
+                "date": f"2024-01-{(i % 9) + 1:02d}",
+                "result": result,
+                "model_p1": 0.20 if result else 0.80,
+                "implied_p1_no_vig": 0.55 if result else 0.45,
+            })
+
+        diagnostic = no_lookahead_blend_weight_diagnostic(
+            pd.DataFrame(rows),
+            "model_p1",
+            candidate_weights=[0.0, 0.5, 1.0],
+            min_train_rows=10,
+        )
+
+        self.assertEqual(diagnostic["model"], "model_p1")
+        self.assertEqual(diagnostic["yearly"][0]["year"], 2022)
+        self.assertEqual(diagnostic["yearly"][0]["selected_model_weight"], 0.0)
+        self.assertEqual(diagnostic["yearly"][1]["year"], 2023)
+        self.assertEqual(diagnostic["yearly"][1]["selected_model_weight"], 1.0)
+        self.assertEqual(diagnostic["yearly"][2]["year"], 2024)
+        self.assertEqual(diagnostic["yearly"][2]["selected_model_weight"], 1.0)
+        self.assertGreater(diagnostic["yearly"][2]["blended_metrics"]["log_loss"], diagnostic["yearly"][2]["market_metrics"]["log_loss"])
+        self.assertGreater(diagnostic["overall_blended_metrics"]["log_loss"], diagnostic["overall_oracle_best_weight_metrics"]["log_loss"])
 
     def test_disagreement_fallback_routing_uses_prior_year_segments_only(self) -> None:
         import pandas as pd
