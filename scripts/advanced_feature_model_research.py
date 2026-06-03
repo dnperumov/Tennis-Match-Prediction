@@ -1476,6 +1476,152 @@ def interaction_model_market_disagreement_segments(
     return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
 
 
+def _stable_lagging_segments_from_training(
+    train: pd.DataFrame,
+    prob_col: str,
+    segment_groups: list[tuple[str, ...]],
+    min_train_rows: int,
+    min_years: int,
+    min_stable_year_share: float,
+) -> dict[str, dict]:
+    """Find prior-year disagreement buckets where model fallback to market is justified."""
+    flagged: dict[str, dict] = {}
+    if train.empty or prob_col not in train.columns or "implied_p1_no_vig" not in train.columns:
+        return flagged
+    df = _bucket_segment_diagnostics(train).copy()
+    df["_model_pick"] = (df[prob_col] >= 0.5).astype(int)
+    df["_market_pick"] = (df["implied_p1_no_vig"] >= 0.5).astype(int)
+    df = df[df["_model_pick"] != df["_market_pick"]].copy()
+    if df.empty:
+        return flagged
+    for group in segment_groups:
+        if not set(group).issubset(df.columns):
+            continue
+        segment_col = "__".join(group)
+        df[segment_col] = _composite_segment_series(df, list(group))
+        for segment, g in df.groupby(segment_col, dropna=False):
+            if len(g) < min_train_rows:
+                continue
+            m = metrics_for(g, prob_col)
+            log_loss_delta = float(m["log_loss"] - m["market_log_loss"])
+            brier_delta = float(m["brier"] - m["market_brier"])
+            if log_loss_delta <= 0 or brier_delta <= 0:
+                continue
+            stability = segment_year_stability(g, prob_col)
+            year_count = int(stability.get("year_count", 0))
+            if year_count:
+                required_stable_years = max(min_years, int(math.ceil(year_count * min_stable_year_share)))
+                if (
+                    year_count < min_years
+                    or int(stability.get("years_model_lags_market_log_loss", 0)) < required_stable_years
+                    or int(stability.get("years_model_lags_market_brier", 0)) < required_stable_years
+                ):
+                    continue
+            flagged[str(segment)] = {
+                "segment_col": segment_col,
+                "segment_columns": list(group),
+                "segment": str(segment),
+                "train_rows": int(len(g)),
+                **m,
+                **stability,
+                "model_minus_market_log_loss": log_loss_delta,
+                "model_minus_market_brier": brier_delta,
+            }
+    return flagged
+
+
+def disagreement_fallback_routing_diagnostic(
+    preds: pd.DataFrame,
+    prob_col: str,
+    segment_groups: list[tuple[str, ...]] | None = None,
+    min_train_rows: int = 150,
+    min_years: int = 2,
+    min_stable_year_share: float = 0.60,
+) -> dict:
+    """Evaluate a no-lookahead market fallback policy for bad disagreement buckets.
+
+    For each test year, the diagnostic uses only earlier out-of-sample years to find
+    model-vs-market disagreement segments where the model stably lagged the market
+    on both log loss and Brier. Current-year rows in those same disagreement
+    segments are routed back to no-vig market probability; all other rows keep the
+    original model probability. This is a research-only held-out routing test, not a
+    betting execution policy.
+    """
+    groups = segment_groups or DEFAULT_INTERACTION_SEGMENT_PAIRS
+    if preds.empty or "date" not in preds.columns:
+        return {
+            "model": prob_col,
+            "routed_probability_col": f"{prob_col}_disagreement_fallback",
+            "routed_rows": 0,
+            "overall_original_metrics": None,
+            "overall_routed_metrics": None,
+            "yearly": [],
+            "note": "No rows/date column available for no-lookahead disagreement fallback routing diagnostic.",
+        }
+    df = _bucket_segment_diagnostics(preds).copy()
+    df["_year"] = pd.to_datetime(df["date"], errors="coerce").dt.year
+    df = df.dropna(subset=["_year"]).copy()
+    routed_col = f"{prob_col}_disagreement_fallback"
+    df[routed_col] = df[prob_col].astype(float)
+    df["_routed_to_market"] = False
+    yearly = []
+    for year in sorted(int(y) for y in df["_year"].dropna().unique()):
+        train = df[df["_year"] < year].copy()
+        test_mask = df["_year"].eq(year)
+        flagged = _stable_lagging_segments_from_training(
+            train=train,
+            prob_col=prob_col,
+            segment_groups=groups,
+            min_train_rows=min_train_rows,
+            min_years=min_years,
+            min_stable_year_share=min_stable_year_share,
+        )
+        year_route_mask = pd.Series(False, index=df.index)
+        if flagged:
+            for segment, spec in flagged.items():
+                cols = spec["segment_columns"]
+                if not set(cols).issubset(df.columns):
+                    continue
+                segment_labels = _composite_segment_series(df.loc[test_mask], cols)
+                segment_mask = pd.Series(False, index=df.index)
+                segment_mask.loc[test_mask] = segment_labels.eq(segment).to_numpy()
+                disagree_mask = (df[prob_col] >= 0.5).astype(int) != (df["implied_p1_no_vig"] >= 0.5).astype(int)
+                year_route_mask |= test_mask & segment_mask & disagree_mask
+        df.loc[year_route_mask, routed_col] = df.loc[year_route_mask, "implied_p1_no_vig"]
+        df.loc[year_route_mask, "_routed_to_market"] = True
+        year_df = df.loc[test_mask].copy()
+        original_m = metrics_for(year_df, prob_col)
+        routed_m = metrics_for(year_df, routed_col)
+        yearly.append({
+            "year": int(year),
+            "rows": int(len(year_df)),
+            "routed_rows": int(year_route_mask.sum()),
+            "segments_flagged": sorted(flagged.keys()),
+            "original_log_loss": original_m["log_loss"],
+            "routed_log_loss": routed_m["log_loss"],
+            "original_brier": original_m["brier"],
+            "routed_brier": routed_m["brier"],
+            "routed_minus_original_log_loss": float(routed_m["log_loss"] - original_m["log_loss"]),
+            "routed_minus_original_brier": float(routed_m["brier"] - original_m["brier"]),
+        })
+    overall_original = metrics_for(df, prob_col)
+    overall_routed = metrics_for(df, routed_col)
+    return {
+        "model": prob_col,
+        "routed_probability_col": routed_col,
+        "min_train_rows": int(min_train_rows),
+        "min_years": int(min_years),
+        "min_stable_year_share": float(min_stable_year_share),
+        "routed_rows": int(df["_routed_to_market"].sum()),
+        "overall_original_metrics": overall_original,
+        "overall_routed_metrics": overall_routed,
+        "overall_routed_minus_original_log_loss": float(overall_routed["log_loss"] - overall_original["log_loss"]),
+        "overall_routed_minus_original_brier": float(overall_routed["brier"] - overall_original["brier"]),
+        "yearly": yearly,
+        "note": "Research-only no-lookahead policy: route model-vs-market disagreement rows back to no-vig market only when prior OOS years show stable segment damage.",
+    }
+
+
 DEFAULT_MULTIVARIATE_SEGMENT_GROUPS = [
     ("series", "round_group", "rank_diff_bucket"),
     ("series", "round_group", "market_prob_bucket"),
@@ -1904,6 +2050,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     advanced_interaction_disagreement_segments = interaction_model_market_disagreement_segments(preds, "advanced_features_p1", min_rows=120)
     residual_interaction_disagreement_segments = interaction_model_market_disagreement_segments(preds, "residual_overlay_p1", min_rows=120)
     filtered_interaction_disagreement_segments = interaction_model_market_disagreement_segments(preds, "residual_overlay_filtered_p1", min_rows=120)
+    advanced_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "advanced_features_p1")
+    residual_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "residual_overlay_p1")
+    filtered_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "residual_overlay_filtered_p1")
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "years": years,
@@ -1953,6 +2102,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_interaction_disagreement_beats_market": summarize_segment_strengths(advanced_interaction_disagreement_segments, min_rows=150, top_n=12),
         "where_residual_overlay_interaction_disagreement_beats_market": summarize_segment_strengths(residual_interaction_disagreement_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_interaction_disagreement_beats_market": summarize_segment_strengths(filtered_interaction_disagreement_segments, min_rows=150, top_n=12),
+        "advanced_disagreement_fallback_routing_diagnostic": advanced_disagreement_fallback_routing,
+        "residual_overlay_disagreement_fallback_routing_diagnostic": residual_disagreement_fallback_routing,
+        "filtered_overlay_disagreement_fallback_routing_diagnostic": filtered_disagreement_fallback_routing,
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
         "residual_overlay_underperformance_clusters": cluster_underperformance(preds, "residual_overlay_p1", n_clusters=8),
         "feature_notes": {
@@ -1974,6 +2126,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "residual_overlay": "fits result - no-vig-market as target, applies segment-tuned shrinkage, and uses specialist residual models in early ATP250, post-title/final, surface-switch, Grand Slam, top10, and early-surface-switch buckets",
             "underperformance_filter": "predicts rows where advanced features are likely worse than market; filtered overlay falls back to market when risk is high",
             "model_market_disagreement": "diagnostic-only scans of rows where a model flips the no-vig market favorite, including two-way interaction disagreement buckets; useful for separating true model overrides from rows where model and market already agree",
+            "disagreement_fallback_routing": "no-lookahead diagnostic policy that uses only prior OOS years to identify stable model-damaging disagreement buckets and route those future bucket disagreements back to no-vig market probability",
             "clv": "live/pre-match odds snapshots and CLV storage are handled by scripts/odds_snapshot_store.py; not used in historical backtest until real snapshots exist",
         },
         "disclaimer": "Research only. No betting execution. Market-aware models use closing odds and must be adapted carefully for pre-match live odds/CLV tracking.",

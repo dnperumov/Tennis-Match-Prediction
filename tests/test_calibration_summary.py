@@ -15,6 +15,7 @@ from advanced_feature_model_research import (  # noqa: E402
     evaluate_bin_recalibration_shrinkage_sweep,
     fit_bin_recalibration,
     segment_errors,
+    disagreement_fallback_routing_diagnostic,
     summarize_calibration_diagnostics,
     interaction_segment_errors,
     interaction_model_market_disagreement_segments,
@@ -219,6 +220,61 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(grass["min_year_rows"], 90)
         self.assertEqual(grass["years_model_beats_market_log_loss"], 3)
         self.assertEqual(grass["years_model_beats_market_brier"], 3)
+
+    def test_disagreement_fallback_routing_uses_prior_year_segments_only(self) -> None:
+        import pandas as pd
+
+        rows = []
+        # 2022 establishes an ATP250|early disagreement segment where the model
+        # flips away from the market and loses badly; the 2023 policy may use it.
+        for i in range(12):
+            result = 0 if i < 9 else 1
+            rows.append({
+                "date": f"2022-02-{(i % 9) + 1:02d}",
+                "result": result,
+                "model_p1": 0.65,
+                "implied_p1_no_vig": 0.45,
+                "series": "ATP250",
+                "round_group": "early",
+            })
+        for i in range(12):
+            result = 0 if i < 9 else 1
+            rows.append({
+                "date": f"2023-02-{(i % 9) + 1:02d}",
+                "result": result,
+                "model_p1": 0.65,
+                "implied_p1_no_vig": 0.45,
+                "series": "ATP250",
+                "round_group": "early",
+            })
+        # Different 2023 segment should stay untouched even when model disagrees.
+        for i in range(12):
+            rows.append({
+                "date": f"2023-03-{(i % 9) + 1:02d}",
+                "result": 1,
+                "model_p1": 0.65,
+                "implied_p1_no_vig": 0.45,
+                "series": "ATP500",
+                "round_group": "early",
+            })
+
+        diagnostic = disagreement_fallback_routing_diagnostic(
+            pd.DataFrame(rows),
+            "model_p1",
+            segment_groups=[("series", "round_group")],
+            min_train_rows=10,
+            min_years=1,
+            min_stable_year_share=1.0,
+        )
+
+        self.assertEqual(diagnostic["model"], "model_p1")
+        self.assertEqual(diagnostic["routed_rows"], 12)
+        self.assertEqual(diagnostic["yearly"][0]["year"], 2022)
+        self.assertEqual(diagnostic["yearly"][0]["routed_rows"], 0)
+        self.assertEqual(diagnostic["yearly"][1]["year"], 2023)
+        self.assertEqual(diagnostic["yearly"][1]["routed_rows"], 12)
+        self.assertLess(diagnostic["overall_routed_metrics"]["log_loss"], diagnostic["overall_original_metrics"]["log_loss"])
+        self.assertIn("ATP250 | early", diagnostic["yearly"][1]["segments_flagged"])
 
     def test_interaction_segment_errors_finds_stable_two_way_contexts(self) -> None:
         import pandas as pd
