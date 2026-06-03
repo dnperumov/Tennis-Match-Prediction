@@ -18,6 +18,7 @@ from advanced_feature_model_research import (  # noqa: E402
     summarize_calibration_diagnostics,
     summarize_probability_quality_tradeoffs,
     summarize_segment_strengths,
+    summarize_segment_weaknesses,
     summarize_shrinkage_sweeps,
 )
 
@@ -292,6 +293,83 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(summary["excluded_unstable_segments"], 1)
         self.assertEqual(summary["top_segments"][0]["segment"], "Clay")
         self.assertAlmostEqual(summary["top_segments"][0]["weighted_log_loss_improvement"], 9.0)
+
+    def test_summarize_segment_weaknesses_keeps_only_stable_market_lagging_segments(self) -> None:
+        segment_rows = [
+            {
+                "segment_col": "market_prob_bucket",
+                "segment": "heavy_p1_favorite",
+                "rows": 420,
+                "accuracy": 0.63,
+                "log_loss": 0.71,
+                "market_log_loss": 0.58,
+                "brier": 0.24,
+                "market_brier": 0.19,
+                "model_minus_market_log_loss": 0.13,
+                "model_minus_market_brier": 0.05,
+                "year_count": 5,
+                "min_year_rows": 60,
+                "years_model_lags_market_log_loss": 5,
+                "years_model_lags_market_brier": 4,
+            },
+            {
+                "segment_col": "surface",
+                "segment": "Clay",
+                "rows": 500,
+                "accuracy": 0.66,
+                "log_loss": 0.62,
+                "market_log_loss": 0.60,
+                "brier": 0.21,
+                "market_brier": 0.20,
+                "model_minus_market_log_loss": 0.02,
+                "model_minus_market_brier": 0.01,
+                "year_count": 5,
+                "min_year_rows": 80,
+                "years_model_lags_market_log_loss": 2,
+                "years_model_lags_market_brier": 5,
+            },
+            {
+                "segment_col": "round_group",
+                "segment": "early",
+                "rows": 90,
+                "accuracy": 0.61,
+                "log_loss": 0.65,
+                "market_log_loss": 0.60,
+                "brier": 0.22,
+                "market_brier": 0.20,
+                "model_minus_market_log_loss": 0.05,
+                "model_minus_market_brier": 0.02,
+                "year_count": 3,
+                "min_year_rows": 30,
+                "years_model_lags_market_log_loss": 3,
+                "years_model_lags_market_brier": 3,
+            },
+            {
+                "segment_col": "series",
+                "segment": "ATP500",
+                "rows": 300,
+                "accuracy": 0.69,
+                "log_loss": 0.55,
+                "market_log_loss": 0.58,
+                "brier": 0.18,
+                "market_brier": 0.20,
+                "model_minus_market_log_loss": -0.03,
+                "model_minus_market_brier": -0.02,
+                "year_count": 3,
+                "min_year_rows": 100,
+                "years_model_lags_market_log_loss": 0,
+                "years_model_lags_market_brier": 0,
+            },
+        ]
+
+        summary = summarize_segment_weaknesses(segment_rows, min_rows=100, top_n=2, min_years=3)
+
+        self.assertEqual(summary["candidate_count"], 1)
+        self.assertEqual(summary["excluded_low_sample_segments"], 1)
+        self.assertEqual(summary["excluded_unstable_segments"], 1)
+        self.assertEqual(summary["top_segments"][0]["segment"], "heavy_p1_favorite")
+        self.assertAlmostEqual(summary["top_segments"][0]["weighted_log_loss_damage"], 54.6)
+        self.assertEqual(summary["top_segments"][0]["hypothesis_label"], "stable_market_lagging_segment")
 
     def test_summarize_probability_quality_tradeoffs_does_not_warn_on_accuracy_tie(self) -> None:
         rows = [

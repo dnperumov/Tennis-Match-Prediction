@@ -1319,6 +1319,8 @@ def segment_year_stability(g: pd.DataFrame, prob_col: str) -> dict:
         "min_year_rows": 0,
         "years_model_beats_market_log_loss": 0,
         "years_model_beats_market_brier": 0,
+        "years_model_lags_market_log_loss": 0,
+        "years_model_lags_market_brier": 0,
         "yearly_model_minus_market": [],
     }
     if "date" not in g.columns:
@@ -1343,6 +1345,8 @@ def segment_year_stability(g: pd.DataFrame, prob_col: str) -> dict:
         "min_year_rows": int(min(row["rows"] for row in yearly)),
         "years_model_beats_market_log_loss": int(sum(row["model_minus_market_log_loss"] < 0 for row in yearly)),
         "years_model_beats_market_brier": int(sum(row["model_minus_market_brier"] < 0 for row in yearly)),
+        "years_model_lags_market_log_loss": int(sum(row["model_minus_market_log_loss"] > 0 for row in yearly)),
+        "years_model_lags_market_brier": int(sum(row["model_minus_market_brier"] > 0 for row in yearly)),
         "yearly_model_minus_market": yearly,
     }
 
@@ -1402,6 +1406,61 @@ def summarize_segment_strengths(
         "excluded_unstable_segments": int(excluded_unstable_segments),
         "top_segments": candidates[:top_n],
         "note": "Research-only segment hypotheses from historical walk-forward rows; require multi-year stability and forward CLV/paper tracking before use.",
+    }
+
+
+def summarize_segment_weaknesses(
+    segment_rows: list[dict],
+    min_rows: int = 150,
+    top_n: int = 12,
+    min_years: int = 3,
+    min_stable_year_share: float = 0.60,
+) -> dict:
+    """Return material segments where a model persistently lags the no-vig market.
+
+    This companion to the strength summary keeps hourly reports focused on stable,
+    high-impact failure modes instead of one-year noise or tiny buckets.
+    """
+    candidates = []
+    excluded_low_sample_segments = 0
+    excluded_unstable_segments = 0
+    for row in segment_rows:
+        rows = int(row.get("rows", 0))
+        log_loss_delta = float(row.get("model_minus_market_log_loss", 0.0))
+        brier_delta = float(row.get("model_minus_market_brier", 0.0))
+        if log_loss_delta <= 0 or brier_delta <= 0:
+            continue
+        if rows < min_rows:
+            excluded_low_sample_segments += 1
+            continue
+        year_count = int(row.get("year_count", 0))
+        if year_count:
+            required_stable_years = max(min_years, int(math.ceil(year_count * min_stable_year_share)))
+            lag_ll = int(row.get("years_model_lags_market_log_loss", 0))
+            lag_brier = int(row.get("years_model_lags_market_brier", 0))
+            if year_count < min_years or lag_ll < required_stable_years or lag_brier < required_stable_years:
+                excluded_unstable_segments += 1
+                continue
+        enriched = dict(row)
+        enriched["weighted_log_loss_damage"] = float(log_loss_delta * rows)
+        enriched["weighted_brier_damage"] = float(brier_delta * rows)
+        enriched["stability_rule"] = {
+            "min_years": int(min_years),
+            "min_stable_year_share": float(min_stable_year_share),
+        }
+        enriched["hypothesis_label"] = "stable_market_lagging_segment"
+        candidates.append(enriched)
+    candidates.sort(key=lambda r: (r["weighted_log_loss_damage"], r["weighted_brier_damage"]), reverse=True)
+    return {
+        "min_rows": int(min_rows),
+        "min_years": int(min_years),
+        "min_stable_year_share": float(min_stable_year_share),
+        "top_n": int(top_n),
+        "candidate_count": int(len(candidates)),
+        "excluded_low_sample_segments": int(excluded_low_sample_segments),
+        "excluded_unstable_segments": int(excluded_unstable_segments),
+        "top_segments": candidates[:top_n],
+        "note": "Research-only stable weakness hypotheses from historical walk-forward rows; use these to prioritize feature/routing work, not betting execution.",
     }
 
 
@@ -1634,6 +1693,8 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "grand_slam_calibration_summary": summarize_calibration_diagnostics(grand_slam_model_rows, min_rows=20, top_n=12),
         "where_advanced_underperforms_market": advanced_segments[:40],
         "where_residual_overlay_underperforms_market": residual_segments[:40],
+        "where_advanced_stably_lags_market": summarize_segment_weaknesses(advanced_segments, min_rows=150, top_n=12),
+        "where_residual_overlay_stably_lags_market": summarize_segment_weaknesses(residual_segments, min_rows=150, top_n=12),
         "where_advanced_beats_market": summarize_segment_strengths(advanced_segments, min_rows=150, top_n=12),
         "where_residual_overlay_beats_market": summarize_segment_strengths(residual_segments, min_rows=150, top_n=12),
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
