@@ -16,6 +16,7 @@ from advanced_feature_model_research import (  # noqa: E402
     fit_bin_recalibration,
     segment_errors,
     summarize_calibration_diagnostics,
+    interaction_segment_errors,
     summarize_probability_quality_tradeoffs,
     summarize_segment_strengths,
     summarize_segment_weaknesses,
@@ -215,6 +216,80 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(grass["min_year_rows"], 90)
         self.assertEqual(grass["years_model_beats_market_log_loss"], 3)
         self.assertEqual(grass["years_model_beats_market_brier"], 3)
+
+    def test_interaction_segment_errors_finds_stable_two_way_contexts(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023, 2024]:
+            for i in range(90):
+                rows.append({
+                    "date": f"{year}-02-{(i % 9) + 1:02d}",
+                    "result": 1 if i % 2 else 0,
+                    "model_p1": 0.70 if i % 2 else 0.20,
+                    "implied_p1_no_vig": 0.50,
+                    "surface": "Grass",
+                    "series": "ATP250",
+                    "court": "Outdoor",
+                    "round_group": "early",
+                    "round": "1st Round",
+                    "is_early_round": 1,
+                    "any_top10": 0,
+                    "both_top10": 0,
+                    "early_after_title_p1": 0,
+                    "early_after_title_p2": 0,
+                    "rank_diff": 60,
+                    "rest_diff": -4,
+                    "matches_last7_diff": 3,
+                    "p1_surface_switch": 1,
+                    "p2_surface_switch": 0,
+                    "p1_title_within_14": 0,
+                    "p2_title_within_14": 0,
+                    "p1_final_within_7": 0,
+                    "p2_final_within_7": 0,
+                })
+
+        diagnostics = interaction_segment_errors(
+            pd.DataFrame(rows),
+            "model_p1",
+            interaction_pairs=[("series", "rank_diff_bucket")],
+            min_rows=80,
+        )
+
+        self.assertEqual(len(diagnostics), 1)
+        self.assertEqual(diagnostics[0]["segment_col"], "series__rank_diff_bucket")
+        self.assertEqual(diagnostics[0]["segment"], "ATP250 | p1_much_lower_rank")
+        self.assertEqual(diagnostics[0]["rows"], 270)
+        self.assertEqual(diagnostics[0]["year_count"], 3)
+        self.assertEqual(diagnostics[0]["years_model_beats_market_log_loss"], 3)
+        self.assertLess(diagnostics[0]["model_minus_market_log_loss"], 0)
+
+    def test_interaction_segment_errors_handles_single_class_year_buckets(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year, result in [(2022, 1), (2023, 0), (2024, 1)]:
+            for i in range(90):
+                rows.append({
+                    "date": f"{year}-03-{(i % 9) + 1:02d}",
+                    "result": result,
+                    "model_p1": 0.80 if result else 0.20,
+                    "implied_p1_no_vig": 0.50,
+                    "surface": "Hard",
+                    "series": "ATP250",
+                    "round_group": "early",
+                    "rank_diff": 60,
+                })
+
+        diagnostics = interaction_segment_errors(
+            pd.DataFrame(rows),
+            "model_p1",
+            interaction_pairs=[("series", "rank_diff_bucket")],
+            min_rows=80,
+        )
+
+        self.assertEqual(diagnostics[0]["year_count"], 3)
+        self.assertEqual(len(diagnostics[0]["yearly_model_minus_market"]), 3)
 
     def test_summarize_segment_strengths_keeps_only_stable_market_beating_segments(self) -> None:
         segment_rows = [

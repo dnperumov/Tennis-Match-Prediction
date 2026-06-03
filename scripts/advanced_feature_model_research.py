@@ -679,9 +679,9 @@ def metrics_for(df: pd.DataFrame, prob_col: str) -> dict:
         "rows": int(len(df)),
         "accuracy": float(accuracy_score(y, pred)),
         "roc_auc": float(roc_auc_score(y, p)) if y.nunique() == 2 else None,
-        "log_loss": float(log_loss(y, p)),
+        "log_loss": float(log_loss(y, p, labels=[0, 1])),
         "brier": float(brier_score_loss(y, p)),
-        "market_log_loss": float(log_loss(y, df["implied_p1_no_vig"].clip(1e-6, 1 - 1e-6))),
+        "market_log_loss": float(log_loss(y, df["implied_p1_no_vig"].clip(1e-6, 1 - 1e-6), labels=[0, 1])),
         "market_brier": float(brier_score_loss(y, df["implied_p1_no_vig"].clip(1e-6, 1 - 1e-6))),
         "mean_prob": float(p.mean()),
         "actual_rate": float(y.mean()),
@@ -1311,6 +1311,63 @@ def segment_errors(preds: pd.DataFrame, prob_col: str) -> list[dict]:
     return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
 
 
+DEFAULT_INTERACTION_SEGMENT_PAIRS = [
+    ("series", "rank_diff_bucket"),
+    ("series", "market_prob_bucket"),
+    ("series", "round_group"),
+    ("series", "surface_switch_any"),
+    ("surface", "market_prob_bucket"),
+    ("surface", "round_group"),
+    ("surface", "rank_diff_bucket"),
+    ("round_group", "market_prob_bucket"),
+    ("round_group", "rank_diff_bucket"),
+    ("market_prob_bucket", "matches_last7_diff_bucket"),
+    ("market_prob_bucket", "rest_diff_bucket"),
+    ("market_prob_bucket", "surface_switch_any"),
+    ("rank_diff_bucket", "matches_last7_diff_bucket"),
+    ("rank_diff_bucket", "rest_diff_bucket"),
+    ("surface_switch_any", "post_title_or_final_any"),
+]
+
+
+def interaction_segment_errors(
+    preds: pd.DataFrame,
+    prob_col: str,
+    interaction_pairs: list[tuple[str, str]] | None = None,
+    min_rows: int = 120,
+) -> list[dict]:
+    """Score material two-way diagnostic buckets against the no-vig market.
+
+    Single-column segment scans hide many actionable patterns. This helper keeps
+    the same no-lookahead OOS rows but intersects coarse diagnostic buckets (for
+    example series x rank bucket) so stable weak/strength clusters can surface.
+    """
+    rows = []
+    df = _bucket_segment_diagnostics(preds)
+    pairs = interaction_pairs or DEFAULT_INTERACTION_SEGMENT_PAIRS
+    for left, right in pairs:
+        if left not in df.columns or right not in df.columns:
+            continue
+        tmp = df.copy()
+        segment_col = f"{left}__{right}"
+        tmp[segment_col] = tmp[left].astype(str) + " | " + tmp[right].astype(str)
+        for seg, g in tmp.groupby(segment_col, dropna=False):
+            if len(g) < min_rows:
+                continue
+            m = metrics_for(g, prob_col)
+            rows.append({
+                "segment_col": segment_col,
+                "segment": str(seg),
+                "left_segment_col": left,
+                "right_segment_col": right,
+                **m,
+                **segment_year_stability(g, prob_col),
+                "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
+                "model_minus_market_brier": float(m["brier"] - m["market_brier"]),
+            })
+    return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
+
+
 def segment_year_stability(g: pd.DataFrame, prob_col: str) -> dict:
     """Summarize whether a segment's model-vs-market result persists across years."""
     empty = {
@@ -1678,6 +1735,8 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     grand_slam_model_rows = grand_slam_benchmark.get("overall_model_comparison", []) if isinstance(grand_slam_benchmark, dict) else []
     advanced_segments = segment_errors(preds, "advanced_features_p1")
     residual_segments = segment_errors(preds, "residual_overlay_p1")
+    advanced_interaction_segments = interaction_segment_errors(preds, "advanced_features_p1", min_rows=120)
+    residual_interaction_segments = interaction_segment_errors(preds, "residual_overlay_p1", min_rows=120)
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "years": years,
@@ -1693,10 +1752,16 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "grand_slam_calibration_summary": summarize_calibration_diagnostics(grand_slam_model_rows, min_rows=20, top_n=12),
         "where_advanced_underperforms_market": advanced_segments[:40],
         "where_residual_overlay_underperforms_market": residual_segments[:40],
+        "where_advanced_interactions_underperform_market": advanced_interaction_segments[:40],
+        "where_residual_overlay_interactions_underperform_market": residual_interaction_segments[:40],
         "where_advanced_stably_lags_market": summarize_segment_weaknesses(advanced_segments, min_rows=150, top_n=12),
         "where_residual_overlay_stably_lags_market": summarize_segment_weaknesses(residual_segments, min_rows=150, top_n=12),
+        "where_advanced_interactions_stably_lag_market": summarize_segment_weaknesses(advanced_interaction_segments, min_rows=150, top_n=12),
+        "where_residual_overlay_interactions_stably_lag_market": summarize_segment_weaknesses(residual_interaction_segments, min_rows=150, top_n=12),
         "where_advanced_beats_market": summarize_segment_strengths(advanced_segments, min_rows=150, top_n=12),
         "where_residual_overlay_beats_market": summarize_segment_strengths(residual_segments, min_rows=150, top_n=12),
+        "where_advanced_interactions_beat_market": summarize_segment_strengths(advanced_interaction_segments, min_rows=150, top_n=12),
+        "where_residual_overlay_interactions_beat_market": summarize_segment_strengths(residual_interaction_segments, min_rows=150, top_n=12),
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
         "residual_overlay_underperformance_clusters": cluster_underperformance(preds, "residual_overlay_p1", n_clusters=8),
         "feature_notes": {
