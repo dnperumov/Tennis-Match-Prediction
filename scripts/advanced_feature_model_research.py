@@ -1287,15 +1287,17 @@ def _bucket_segment_diagnostics(preds: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+DEFAULT_SEGMENT_COLS = [
+    "surface", "series", "court", "round_group", "round", "is_early_round", "any_top10", "both_top10",
+    "early_after_title_p1", "early_after_title_p2", "rank_diff_bucket", "market_prob_bucket",
+    "rest_diff_bucket", "matches_last7_diff_bucket", "surface_switch_any", "post_title_or_final_any",
+]
+
+
 def segment_errors(preds: pd.DataFrame, prob_col: str) -> list[dict]:
     rows = []
     df = _bucket_segment_diagnostics(preds)
-    segment_cols = [
-        "surface", "series", "court", "round_group", "round", "is_early_round", "any_top10", "both_top10",
-        "early_after_title_p1", "early_after_title_p2", "rank_diff_bucket", "market_prob_bucket",
-        "rest_diff_bucket", "matches_last7_diff_bucket", "surface_switch_any", "post_title_or_final_any",
-    ]
-    for col in [c for c in segment_cols if c in df.columns]:
+    for col in [c for c in DEFAULT_SEGMENT_COLS if c in df.columns]:
         for seg, g in df.groupby(col, dropna=False):
             if len(g) < 80:
                 continue
@@ -1305,6 +1307,53 @@ def segment_errors(preds: pd.DataFrame, prob_col: str) -> list[dict]:
                 "segment": str(seg),
                 **m,
                 **segment_year_stability(g, prob_col),
+                "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
+                "model_minus_market_brier": float(m["brier"] - m["market_brier"]),
+            })
+    return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
+
+
+def model_market_disagreement_segments(
+    preds: pd.DataFrame,
+    prob_col: str,
+    segment_cols: list[str] | None = None,
+    min_rows: int = 120,
+) -> list[dict]:
+    """Score contexts where a model flips the no-vig market favorite.
+
+    Broad segment scans can be dominated by rows where model and market choose the
+    same side. This diagnostic isolates true model-vs-market pick disagreements,
+    then reports whether those overrides improve or damage accuracy/proper scores
+    with the same multi-year stability fields as the broader segment scans.
+    """
+    rows = []
+    df = _bucket_segment_diagnostics(preds)
+    if prob_col not in df.columns or "implied_p1_no_vig" not in df.columns:
+        return rows
+    df = df.copy()
+    df["_model_pick"] = (df[prob_col] >= 0.5).astype(int)
+    df["_market_pick"] = (df["implied_p1_no_vig"] >= 0.5).astype(int)
+    df["_model_market_disagree"] = df["_model_pick"] != df["_market_pick"]
+    cols = segment_cols or DEFAULT_SEGMENT_COLS
+    for col in [c for c in cols if c in df.columns]:
+        for seg, all_g in df.groupby(col, dropna=False):
+            g = all_g[all_g["_model_market_disagree"]].copy()
+            if len(g) < min_rows:
+                continue
+            m = metrics_for(g, prob_col)
+            y = g["result"].astype(int)
+            model_pick_accuracy = float((g["_model_pick"] == y).mean())
+            market_pick_accuracy = float((g["_market_pick"] == y).mean())
+            rows.append({
+                "segment_col": col,
+                "segment": str(seg),
+                **m,
+                **segment_year_stability(g, prob_col),
+                "disagreement_rows": int(len(g)),
+                "agreement_rows_excluded": int(len(all_g) - len(g)),
+                "model_pick_accuracy": model_pick_accuracy,
+                "market_pick_accuracy": market_pick_accuracy,
+                "model_minus_market_pick_accuracy": float(model_pick_accuracy - market_pick_accuracy),
                 "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
                 "model_minus_market_brier": float(m["brier"] - m["market_brier"]),
             })
@@ -1791,6 +1840,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     residual_interaction_segments = interaction_segment_errors(preds, "residual_overlay_p1", min_rows=120)
     advanced_multivariate_segments = multivariate_segment_errors(preds, "advanced_features_p1", min_rows=120)
     residual_multivariate_segments = multivariate_segment_errors(preds, "residual_overlay_p1", min_rows=120)
+    advanced_disagreement_segments = model_market_disagreement_segments(preds, "advanced_features_p1", min_rows=120)
+    residual_disagreement_segments = model_market_disagreement_segments(preds, "residual_overlay_p1", min_rows=120)
+    filtered_disagreement_segments = model_market_disagreement_segments(preds, "residual_overlay_filtered_p1", min_rows=120)
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "years": years,
@@ -1810,6 +1862,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_residual_overlay_interactions_underperform_market": residual_interaction_segments[:40],
         "where_advanced_multivariate_underperform_market": advanced_multivariate_segments[:40],
         "where_residual_overlay_multivariate_underperform_market": residual_multivariate_segments[:40],
+        "where_advanced_disagrees_with_market": advanced_disagreement_segments[:40],
+        "where_residual_overlay_disagrees_with_market": residual_disagreement_segments[:40],
+        "where_filtered_overlay_disagrees_with_market": filtered_disagreement_segments[:40],
         "where_advanced_stably_lags_market": summarize_segment_weaknesses(advanced_segments, min_rows=150, top_n=12),
         "where_residual_overlay_stably_lags_market": summarize_segment_weaknesses(residual_segments, min_rows=150, top_n=12),
         "where_advanced_interactions_stably_lag_market": summarize_segment_weaknesses(advanced_interaction_segments, min_rows=150, top_n=12),
@@ -1822,6 +1877,12 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_residual_overlay_interactions_beat_market": summarize_segment_strengths(residual_interaction_segments, min_rows=150, top_n=12),
         "where_advanced_multivariate_beat_market": summarize_segment_strengths(advanced_multivariate_segments, min_rows=150, top_n=12),
         "where_residual_overlay_multivariate_beat_market": summarize_segment_strengths(residual_multivariate_segments, min_rows=150, top_n=12),
+        "where_advanced_disagreement_stably_lags_market": summarize_segment_weaknesses(advanced_disagreement_segments, min_rows=150, top_n=12),
+        "where_residual_overlay_disagreement_stably_lags_market": summarize_segment_weaknesses(residual_disagreement_segments, min_rows=150, top_n=12),
+        "where_filtered_overlay_disagreement_stably_lags_market": summarize_segment_weaknesses(filtered_disagreement_segments, min_rows=150, top_n=12),
+        "where_advanced_disagreement_beats_market": summarize_segment_strengths(advanced_disagreement_segments, min_rows=150, top_n=12),
+        "where_residual_overlay_disagreement_beats_market": summarize_segment_strengths(residual_disagreement_segments, min_rows=150, top_n=12),
+        "where_filtered_overlay_disagreement_beats_market": summarize_segment_strengths(filtered_disagreement_segments, min_rows=150, top_n=12),
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
         "residual_overlay_underperformance_clusters": cluster_underperformance(preds, "residual_overlay_p1", n_clusters=8),
         "feature_notes": {
@@ -1842,6 +1903,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "statistically_enhanced_abilities": "pre-match ability covariates are estimated only from prior matches: surface ability, score-derived serve/return proxy, best-of-five/Slam ability, recent form ability, and fatigue-adjusted ability",
             "residual_overlay": "fits result - no-vig-market as target, applies segment-tuned shrinkage, and uses specialist residual models in early ATP250, post-title/final, surface-switch, Grand Slam, top10, and early-surface-switch buckets",
             "underperformance_filter": "predicts rows where advanced features are likely worse than market; filtered overlay falls back to market when risk is high",
+            "model_market_disagreement": "diagnostic-only scan of rows where a model flips the no-vig market favorite; useful for separating true model overrides from rows where model and market already agree",
             "clv": "live/pre-match odds snapshots and CLV storage are handled by scripts/odds_snapshot_store.py; not used in historical backtest until real snapshots exist",
         },
         "disclaimer": "Research only. No betting execution. Market-aware models use closing odds and must be adapted carefully for pre-match live odds/CLV tracking.",

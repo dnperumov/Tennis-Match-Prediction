@@ -17,6 +17,7 @@ from advanced_feature_model_research import (  # noqa: E402
     segment_errors,
     summarize_calibration_diagnostics,
     interaction_segment_errors,
+    model_market_disagreement_segments,
     multivariate_segment_errors,
     summarize_probability_quality_tradeoffs,
     summarize_segment_strengths,
@@ -427,6 +428,76 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(summary["excluded_unstable_segments"], 1)
         self.assertEqual(summary["top_segments"][0]["segment"], "Clay")
         self.assertAlmostEqual(summary["top_segments"][0]["weighted_log_loss_improvement"], 9.0)
+
+    def test_model_market_disagreement_segments_focuses_on_model_pick_flips(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023, 2024]:
+            for i in range(70):
+                rows.append({
+                    "date": f"{year}-06-{(i % 9) + 1:02d}",
+                    "result": 1,
+                    "model_p1": 0.62,
+                    "implied_p1_no_vig": 0.44,
+                    "series": "ATP250",
+                    "round_group": "early",
+                    "surface": "Grass",
+                    "rank_diff": -20,
+                    "rest_diff": 0,
+                    "matches_last7_diff": 0,
+                    "p1_surface_switch": 0,
+                    "p2_surface_switch": 0,
+                    "p1_title_within_14": 0,
+                    "p2_title_within_14": 0,
+                    "p1_final_within_7": 0,
+                    "p2_final_within_7": 0,
+                })
+                rows.append({
+                    "date": f"{year}-06-{(i % 9) + 1:02d}",
+                    "result": 0,
+                    "model_p1": 0.38,
+                    "implied_p1_no_vig": 0.56,
+                    "series": "ATP250",
+                    "round_group": "early",
+                    "surface": "Grass",
+                    "rank_diff": 20,
+                    "rest_diff": 0,
+                    "matches_last7_diff": 0,
+                    "p1_surface_switch": 0,
+                    "p2_surface_switch": 0,
+                    "p1_title_within_14": 0,
+                    "p2_title_within_14": 0,
+                    "p1_final_within_7": 0,
+                    "p2_final_within_7": 0,
+                })
+            for i in range(20):
+                rows.append({
+                    "date": f"{year}-07-{(i % 9) + 1:02d}",
+                    "result": 1,
+                    "model_p1": 0.70,
+                    "implied_p1_no_vig": 0.80,
+                    "series": "ATP250",
+                    "round_group": "early",
+                    "surface": "Grass",
+                })
+
+        diagnostics = model_market_disagreement_segments(
+            pd.DataFrame(rows),
+            "model_p1",
+            segment_cols=["series", "round_group"],
+            min_rows=100,
+        )
+
+        self.assertEqual(len(diagnostics), 2)
+        by_col = {row["segment_col"]: row for row in diagnostics}
+        self.assertEqual(by_col["series"]["rows"], 420)
+        self.assertEqual(by_col["series"]["disagreement_rows"], 420)
+        self.assertEqual(by_col["series"]["agreement_rows_excluded"], 60)
+        self.assertEqual(by_col["series"]["year_count"], 3)
+        self.assertEqual(by_col["series"]["years_model_beats_market_log_loss"], 3)
+        self.assertLess(by_col["series"]["model_minus_market_log_loss"], 0)
+        self.assertGreater(by_col["series"]["model_pick_accuracy"], by_col["series"]["market_pick_accuracy"])
 
     def test_summarize_segment_weaknesses_keeps_only_stable_market_lagging_segments(self) -> None:
         segment_rows = [
