@@ -416,6 +416,43 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertGreater(by_col["series"]["model_minus_market_brier"], 0)
         self.assertEqual(by_col["series"]["year_count"], 3)
 
+    def test_disagreement_segments_can_use_calibrated_market_baseline(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023]:
+            for _ in range(4):
+                rows.append({
+                    "date": f"{year}-01-01",
+                    "result": 1,
+                    "surface": "Hard",
+                    "model_p1": 0.54,
+                    "implied_p1_no_vig": 0.49,
+                    "market_bin_recalibrated_p1": 0.44,
+                })
+            for _ in range(4):
+                rows.append({
+                    "date": f"{year}-01-02",
+                    "result": 0,
+                    "surface": "Hard",
+                    "model_p1": 0.46,
+                    "implied_p1_no_vig": 0.51,
+                    "market_bin_recalibrated_p1": 0.56,
+                })
+
+        diagnostics = model_market_disagreement_segments(
+            pd.DataFrame(rows),
+            "model_p1",
+            min_rows=8,
+            baseline_prob_col="market_bin_recalibrated_p1",
+        )
+
+        self.assertEqual(diagnostics[0]["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(diagnostics[0]["disagreement_rows"], 16)
+        self.assertEqual(diagnostics[0]["agreement_rows_excluded"], 0)
+        self.assertLess(diagnostics[0]["model_minus_market_log_loss"], 0)
+        self.assertEqual(diagnostics[0]["years_model_beats_market_log_loss"], 2)
+
     def test_disagreement_margin_segments_scores_only_model_market_overrides_by_gap_bucket(self) -> None:
         import pandas as pd
 
