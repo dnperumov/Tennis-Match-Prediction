@@ -2189,7 +2189,7 @@ def no_lookahead_blend_weight_diagnostic(
             for weight in weights:
                 col = (1.0 - weight) * train[baseline_prob_col].astype(float) + weight * train[model_prob_col].astype(float)
                 candidate_df = train.assign(_candidate_blend=col.clip(1e-6, 1 - 1e-6))
-                m = metrics_for(candidate_df, "_candidate_blend")
+                m = metrics_for(candidate_df, "_candidate_blend", baseline_prob_col=baseline_prob_col)
                 train_candidates.append({"model_weight": float(weight), "train_rows": int(len(train)), **m})
             best = min(train_candidates, key=lambda r: (r["log_loss"], r["brier"]))
             selected_weight = float(best["model_weight"])
@@ -2204,21 +2204,21 @@ def no_lookahead_blend_weight_diagnostic(
             "prior_oos_train_rows": int(len(train)),
             "selected_model_weight": float(selected_weight),
             "train_candidates": train_candidates,
-            "model_metrics": metrics_for(year_df, model_prob_col),
-            "market_metrics": metrics_for(year_df, baseline_prob_col),
-            "blended_metrics": metrics_for(year_df, blend_col),
+            "model_metrics": metrics_for(year_df, model_prob_col, baseline_prob_col=baseline_prob_col),
+            "market_metrics": metrics_for(year_df, baseline_prob_col, baseline_prob_col=baseline_prob_col),
+            "blended_metrics": metrics_for(year_df, blend_col, baseline_prob_col=baseline_prob_col),
         })
     oracle_candidates = []
     for weight in weights:
         col = ((1.0 - weight) * df[baseline_prob_col].astype(float) + weight * df[model_prob_col].astype(float)).clip(1e-6, 1 - 1e-6)
         candidate_df = df.assign(_candidate_blend=col)
-        oracle_candidates.append({"model_weight": float(weight), **metrics_for(candidate_df, "_candidate_blend")})
+        oracle_candidates.append({"model_weight": float(weight), **metrics_for(candidate_df, "_candidate_blend", baseline_prob_col=baseline_prob_col)})
     oracle_best = min(oracle_candidates, key=lambda r: (r["log_loss"], r["brier"]))
     df[oracle_col] = ((1.0 - oracle_best["model_weight"]) * df[baseline_prob_col].astype(float) + oracle_best["model_weight"] * df[model_prob_col].astype(float)).clip(1e-6, 1 - 1e-6)
-    model_m = metrics_for(df, model_prob_col)
-    market_m = metrics_for(df, baseline_prob_col)
-    blended_m = metrics_for(df, blend_col)
-    oracle_m = metrics_for(df, oracle_col)
+    model_m = metrics_for(df, model_prob_col, baseline_prob_col=baseline_prob_col)
+    market_m = metrics_for(df, baseline_prob_col, baseline_prob_col=baseline_prob_col)
+    blended_m = metrics_for(df, blend_col, baseline_prob_col=baseline_prob_col)
+    oracle_m = metrics_for(df, oracle_col, baseline_prob_col=baseline_prob_col)
     return {
         "model": model_prob_col,
         "baseline_probability_col": baseline_prob_col,
@@ -2302,7 +2302,7 @@ def no_lookahead_underperformance_risk_threshold_diagnostic(
                     "threshold": float(threshold),
                     "train_rows": int(len(train)),
                     "routed_rows": routed_rows,
-                    **metrics_for(candidate_df, "_candidate_risk_routed"),
+                    **metrics_for(candidate_df, "_candidate_risk_routed", baseline_prob_col=baseline_prob_col),
                 })
             best = min(train_candidates, key=lambda r: (r["log_loss"], r["brier"], -r["threshold"]))
             selected_threshold = float(best["threshold"])
@@ -2310,8 +2310,8 @@ def no_lookahead_underperformance_risk_threshold_diagnostic(
         df.loc[year_route_mask, routed_col] = df.loc[year_route_mask, baseline_prob_col].astype(float)
         df.loc[year_route_mask, "_risk_routed_to_market"] = True
         year_df = df.loc[test_mask].copy()
-        model_m = metrics_for(year_df, model_prob_col)
-        routed_m = metrics_for(year_df, routed_col)
+        model_m = metrics_for(year_df, model_prob_col, baseline_prob_col=baseline_prob_col)
+        routed_m = metrics_for(year_df, routed_col, baseline_prob_col=baseline_prob_col)
         yearly.append({
             "year": int(year),
             "rows": int(len(year_df)),
@@ -2320,14 +2320,14 @@ def no_lookahead_underperformance_risk_threshold_diagnostic(
             "routed_rows": int(year_route_mask.sum()),
             "train_candidates": train_candidates,
             "model_metrics": model_m,
-            "market_metrics": metrics_for(year_df, baseline_prob_col),
+            "market_metrics": metrics_for(year_df, baseline_prob_col, baseline_prob_col=baseline_prob_col),
             "routed_metrics": routed_m,
             "routed_minus_model_log_loss": float(routed_m["log_loss"] - model_m["log_loss"]),
             "routed_minus_model_brier": float(routed_m["brier"] - model_m["brier"]),
         })
-    model_m = metrics_for(df, model_prob_col)
-    market_m = metrics_for(df, baseline_prob_col)
-    routed_m = metrics_for(df, routed_col)
+    model_m = metrics_for(df, model_prob_col, baseline_prob_col=baseline_prob_col)
+    market_m = metrics_for(df, baseline_prob_col, baseline_prob_col=baseline_prob_col)
+    routed_m = metrics_for(df, routed_col, baseline_prob_col=baseline_prob_col)
     return {
         "model": model_prob_col,
         "risk_col": risk_col,
@@ -2488,7 +2488,7 @@ def no_lookahead_agreement_sizing_blend_diagnostic(
                 for weight in weights:
                     col = ((1.0 - weight) * tg[baseline_prob_col].astype(float) + weight * tg[model_prob_col].astype(float)).clip(1e-6, 1 - 1e-6)
                     candidate_df = tg.assign(_candidate_blend=col)
-                    candidates.append({"model_weight": float(weight), "train_rows": int(len(tg)), **metrics_for(candidate_df, "_candidate_blend")})
+                    candidates.append({"model_weight": float(weight), "train_rows": int(len(tg)), **metrics_for(candidate_df, "_candidate_blend", baseline_prob_col=baseline_prob_col)})
                 best = min(candidates, key=lambda r: (r["log_loss"], r["brier"]))
                 year_segment_mask = test_mask & df["_model_market_agree"] & df[segment_col].eq(segment)
                 if bool(year_segment_mask.any()):
@@ -2506,8 +2506,8 @@ def no_lookahead_agreement_sizing_blend_diagnostic(
                         "train_candidates": candidates,
                     })
         year_df = df.loc[test_mask].copy()
-        model_m = metrics_for(year_df, model_prob_col)
-        blended_m = metrics_for(year_df, blend_col)
+        model_m = metrics_for(year_df, model_prob_col, baseline_prob_col=baseline_prob_col)
+        blended_m = metrics_for(year_df, blend_col, baseline_prob_col=baseline_prob_col)
         yearly.append({
             "year": int(year),
             "rows": int(len(year_df)),
@@ -2515,14 +2515,14 @@ def no_lookahead_agreement_sizing_blend_diagnostic(
             "routed_rows": int((test_mask & df["_agreement_blended"]).sum()),
             "selected_segments": selected_segments,
             "model_metrics": model_m,
-            "market_metrics": metrics_for(year_df, baseline_prob_col),
+            "market_metrics": metrics_for(year_df, baseline_prob_col, baseline_prob_col=baseline_prob_col),
             "blended_metrics": blended_m,
             "blended_minus_model_log_loss": float(blended_m["log_loss"] - model_m["log_loss"]),
             "blended_minus_model_brier": float(blended_m["brier"] - model_m["brier"]),
         })
-    model_m = metrics_for(df, model_prob_col)
-    market_m = metrics_for(df, baseline_prob_col)
-    blended_m = metrics_for(df, blend_col)
+    model_m = metrics_for(df, model_prob_col, baseline_prob_col=baseline_prob_col)
+    market_m = metrics_for(df, baseline_prob_col, baseline_prob_col=baseline_prob_col)
+    blended_m = metrics_for(df, blend_col, baseline_prob_col=baseline_prob_col)
     return {
         "model": model_prob_col,
         "baseline_probability_col": baseline_prob_col,
@@ -2600,7 +2600,7 @@ def no_lookahead_market_favorite_pressure_blend_diagnostic(
                 for weight in weights:
                     col = ((1.0 - weight) * tg[baseline_prob_col].astype(float) + weight * tg[model_prob_col].astype(float)).clip(1e-6, 1 - 1e-6)
                     candidate_df = tg.assign(_candidate_blend=col)
-                    candidates.append({"model_weight": float(weight), "train_rows": int(len(tg)), **metrics_for(candidate_df, "_candidate_blend")})
+                    candidates.append({"model_weight": float(weight), "train_rows": int(len(tg)), **metrics_for(candidate_df, "_candidate_blend", baseline_prob_col=baseline_prob_col)})
                 best = min(candidates, key=lambda r: (r["log_loss"], r["brier"]))
                 year_segment_mask = test_mask & df[segment_col].eq(segment)
                 if bool(year_segment_mask.any()):
@@ -2618,8 +2618,8 @@ def no_lookahead_market_favorite_pressure_blend_diagnostic(
                         "train_candidates": candidates,
                     })
         year_df = df.loc[test_mask].copy()
-        model_m = metrics_for(year_df, model_prob_col)
-        blended_m = metrics_for(year_df, blend_col)
+        model_m = metrics_for(year_df, model_prob_col, baseline_prob_col=baseline_prob_col)
+        blended_m = metrics_for(year_df, blend_col, baseline_prob_col=baseline_prob_col)
         yearly.append({
             "year": int(year),
             "rows": int(len(year_df)),
@@ -2627,14 +2627,14 @@ def no_lookahead_market_favorite_pressure_blend_diagnostic(
             "routed_rows": int((test_mask & df["_favorite_pressure_blended"]).sum()),
             "selected_segments": selected_segments,
             "model_metrics": model_m,
-            "market_metrics": metrics_for(year_df, baseline_prob_col),
+            "market_metrics": metrics_for(year_df, baseline_prob_col, baseline_prob_col=baseline_prob_col),
             "blended_metrics": blended_m,
             "blended_minus_model_log_loss": float(blended_m["log_loss"] - model_m["log_loss"]),
             "blended_minus_model_brier": float(blended_m["brier"] - model_m["brier"]),
         })
-    model_m = metrics_for(df, model_prob_col)
-    market_m = metrics_for(df, baseline_prob_col)
-    blended_m = metrics_for(df, blend_col)
+    model_m = metrics_for(df, model_prob_col, baseline_prob_col=baseline_prob_col)
+    market_m = metrics_for(df, baseline_prob_col, baseline_prob_col=baseline_prob_col)
+    blended_m = metrics_for(df, blend_col, baseline_prob_col=baseline_prob_col)
     return {
         "model": model_prob_col,
         "baseline_probability_col": baseline_prob_col,
@@ -2712,7 +2712,7 @@ def no_lookahead_disagreement_margin_blend_diagnostic(
                 for weight in weights:
                     col = ((1.0 - weight) * tg[baseline_prob_col].astype(float) + weight * tg[model_prob_col].astype(float)).clip(1e-6, 1 - 1e-6)
                     candidate_df = tg.assign(_candidate_blend=col)
-                    candidates.append({"model_weight": float(weight), "train_rows": int(len(tg)), **metrics_for(candidate_df, "_candidate_blend")})
+                    candidates.append({"model_weight": float(weight), "train_rows": int(len(tg)), **metrics_for(candidate_df, "_candidate_blend", baseline_prob_col=baseline_prob_col)})
                 best = min(candidates, key=lambda r: (r["log_loss"], r["brier"]))
                 year_segment_mask = test_mask & df["_model_market_disagree"] & df[segment_col].eq(segment)
                 if bool(year_segment_mask.any()):
@@ -2730,8 +2730,8 @@ def no_lookahead_disagreement_margin_blend_diagnostic(
                         "train_candidates": candidates,
                     })
         year_df = df.loc[test_mask].copy()
-        model_m = metrics_for(year_df, model_prob_col)
-        blended_m = metrics_for(year_df, blend_col)
+        model_m = metrics_for(year_df, model_prob_col, baseline_prob_col=baseline_prob_col)
+        blended_m = metrics_for(year_df, blend_col, baseline_prob_col=baseline_prob_col)
         yearly.append({
             "year": int(year),
             "rows": int(len(year_df)),
@@ -2739,14 +2739,14 @@ def no_lookahead_disagreement_margin_blend_diagnostic(
             "routed_rows": int((test_mask & df["_margin_blended"]).sum()),
             "selected_segments": selected_segments,
             "model_metrics": model_m,
-            "market_metrics": metrics_for(year_df, baseline_prob_col),
+            "market_metrics": metrics_for(year_df, baseline_prob_col, baseline_prob_col=baseline_prob_col),
             "blended_metrics": blended_m,
             "blended_minus_model_log_loss": float(blended_m["log_loss"] - model_m["log_loss"]),
             "blended_minus_model_brier": float(blended_m["brier"] - model_m["brier"]),
         })
-    model_m = metrics_for(df, model_prob_col)
-    market_m = metrics_for(df, baseline_prob_col)
-    blended_m = metrics_for(df, blend_col)
+    model_m = metrics_for(df, model_prob_col, baseline_prob_col=baseline_prob_col)
+    market_m = metrics_for(df, baseline_prob_col, baseline_prob_col=baseline_prob_col)
+    blended_m = metrics_for(df, blend_col, baseline_prob_col=baseline_prob_col)
     return {
         "model": model_prob_col,
         "baseline_probability_col": baseline_prob_col,

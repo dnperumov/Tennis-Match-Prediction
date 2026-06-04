@@ -278,7 +278,12 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertIn("model_p1_agreement_sizing_blend_vs_calibrated_market", diagnostics)
         self.assertIn("model_p1_disagreement_margin_blend_vs_calibrated_market", diagnostics)
         pressure = diagnostics["model_p1_market_favorite_pressure_blend_vs_calibrated_market"]
+        agreement = diagnostics["model_p1_agreement_sizing_blend_vs_calibrated_market"]
         self.assertEqual(pressure["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(pressure["overall_model_metrics"]["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(pressure["overall_blended_metrics"]["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(agreement["overall_model_metrics"]["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(agreement["yearly"][0]["model_metrics"]["baseline_probability_col"], "market_bin_recalibrated_p1")
         self.assertEqual(pressure["routed_rows"], 4)
         self.assertLessEqual(
             pressure["overall_blended_metrics"]["log_loss"],
