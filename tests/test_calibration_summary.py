@@ -708,6 +708,38 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertLess(diagnostic["overall_routed_metrics"]["log_loss"], diagnostic["overall_original_metrics"]["log_loss"])
         self.assertIn("ATP250 | early", diagnostic["yearly"][1]["segments_flagged"])
 
+    def test_disagreement_fallback_routing_can_use_calibrated_market_baseline(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023]:
+            for i in range(12):
+                result = 0 if i < 9 else 1
+                rows.append({
+                    "date": f"{year}-02-{(i % 9) + 1:02d}",
+                    "result": result,
+                    "model_p1": 0.65,
+                    "implied_p1_no_vig": 0.52,
+                    "market_bin_recalibrated_p1": 0.45,
+                    "series": "ATP250",
+                    "round_group": "early",
+                })
+
+        diagnostic = disagreement_fallback_routing_diagnostic(
+            pd.DataFrame(rows),
+            "model_p1",
+            segment_groups=[("series", "round_group")],
+            min_train_rows=10,
+            min_years=1,
+            min_stable_year_share=1.0,
+            baseline_prob_col="market_bin_recalibrated_p1",
+        )
+
+        self.assertEqual(diagnostic["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(diagnostic["yearly"][1]["routed_rows"], 12)
+        self.assertLess(diagnostic["overall_routed_metrics"]["log_loss"], diagnostic["overall_original_metrics"]["log_loss"])
+        self.assertEqual(diagnostic["overall_routed_metrics"]["baseline_probability_col"], "market_bin_recalibrated_p1")
+
     def test_interaction_segment_errors_finds_stable_two_way_contexts(self) -> None:
         import pandas as pd
 
