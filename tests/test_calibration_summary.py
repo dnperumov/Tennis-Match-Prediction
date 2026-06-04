@@ -22,6 +22,7 @@ from advanced_feature_model_research import (  # noqa: E402
     model_market_agreement_segments,
     market_favorite_pressure_segments,
     model_market_disagreement_segments,
+    rank_favorite_pressure_segments,
     multivariate_segment_errors,
     no_lookahead_blend_weight_diagnostic,
     no_lookahead_agreement_sizing_blend_diagnostic,
@@ -191,6 +192,33 @@ class CalibrationSummaryTest(unittest.TestCase):
             raw_market_metrics["log_loss"] - raw_market_metrics["market_log_loss"],
         )
         self.assertEqual(calibrated_segments[0]["years_model_beats_market_log_loss"], 2)
+
+    def test_rank_favorite_pressure_segments_use_calibrated_baseline_and_single_class_years(self) -> None:
+        import pandas as pd
+
+        preds = pd.DataFrame({
+            "date": pd.to_datetime(["2022-01-01"] * 4 + ["2023-01-01"] * 4),
+            "result": [1, 1, 1, 1, 1, 1, 1, 0],
+            "model_p1": [0.78, 0.78, 0.76, 0.76, 0.78, 0.78, 0.76, 0.76],
+            "market_bin_recalibrated_p1": [0.72, 0.72, 0.70, 0.70, 0.72, 0.72, 0.70, 0.70],
+            "p1_rank": [5, 6, 7, 8, 5, 6, 7, 8],
+            "p2_rank": [40, 45, 50, 55, 40, 45, 50, 55],
+        })
+
+        rows = rank_favorite_pressure_segments(
+            preds,
+            "model_p1",
+            min_rows=4,
+            baseline_prob_col="market_bin_recalibrated_p1",
+        )
+
+        segment = next(row for row in rows if row["segment_col"] == "favorite_rank_tier__strength__pressure")
+        self.assertEqual(segment["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(segment["segment"], "top10 | solid_favorite | model_overprices_market_favorite_3_10pct")
+        self.assertEqual(segment["rows"], 8)
+        self.assertEqual(segment["year_count"], 2)
+        self.assertEqual(segment["years_model_beats_market_log_loss"], 2)
+        self.assertLess(segment["model_minus_market_log_loss"], 0)
 
     def test_calibrated_market_blend_diagnostics_use_bin_recalibrated_baseline(self) -> None:
         import pandas as pd

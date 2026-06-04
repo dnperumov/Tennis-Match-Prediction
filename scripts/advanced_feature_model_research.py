@@ -1520,6 +1520,116 @@ def _add_market_favorite_pressure_bucket_columns(
     return df
 
 
+def _add_rank_favorite_pressure_bucket_columns(
+    preds: pd.DataFrame,
+    model_prob_col: str,
+    baseline_prob_col: str = "implied_p1_no_vig",
+) -> pd.DataFrame:
+    """Add favorite-rank interaction buckets from the baseline favorite perspective."""
+    required = {"p1_rank", "p2_rank", model_prob_col, baseline_prob_col}
+    missing = required - set(preds.columns)
+    if missing:
+        raise KeyError(f"missing rank-favorite pressure columns: {sorted(missing)}")
+
+    df = _add_market_favorite_pressure_bucket_columns(preds, model_prob_col, baseline_prob_col)
+    p1_rank = pd.to_numeric(df["p1_rank"], errors="coerce")
+    p2_rank = pd.to_numeric(df["p2_rank"], errors="coerce")
+    favorite_is_p1 = df["market_favorite_side"].eq("p1")
+    favorite_rank = pd.Series(np.where(favorite_is_p1, p1_rank, p2_rank), index=df.index)
+    underdog_rank = pd.Series(np.where(favorite_is_p1, p2_rank, p1_rank), index=df.index)
+    rank_missing = favorite_rank.isna() | underdog_rank.isna()
+
+    df["market_favorite_rank"] = favorite_rank
+    df["market_underdog_rank"] = underdog_rank
+    df["market_favorite_rank_advantage"] = np.select(
+        [rank_missing, favorite_rank < underdog_rank, favorite_rank > underdog_rank, favorite_rank.eq(underdog_rank)],
+        ["rank_missing", "favorite_higher_rank", "favorite_lower_rank", "rank_tie"],
+        default="rank_missing",
+    )
+    df["market_favorite_rank_tier"] = pd.cut(
+        favorite_rank,
+        bins=[0, 10, 20, 50, 100, np.inf],
+        labels=["top10", "top11_20", "top21_50", "top51_100", "outside100"],
+        include_lowest=True,
+    ).astype(object).where(favorite_rank.notna(), "rank_missing").astype(str)
+    df["favorite_rank_advantage__strength__pressure"] = _composite_segment_series(
+        df,
+        [
+            "market_favorite_rank_advantage",
+            "market_favorite_strength_bucket",
+            "model_vs_market_favorite_pressure_bucket",
+        ],
+    )
+    df["favorite_rank_tier__strength__pressure"] = _composite_segment_series(
+        df,
+        [
+            "market_favorite_rank_tier",
+            "market_favorite_strength_bucket",
+            "model_vs_market_favorite_pressure_bucket",
+        ],
+    )
+    df["favorite_rank_advantage__tier__strength"] = _composite_segment_series(
+        df,
+        [
+            "market_favorite_rank_advantage",
+            "market_favorite_rank_tier",
+            "market_favorite_strength_bucket",
+        ],
+    )
+    return df
+
+
+def rank_favorite_pressure_segments(
+    preds: pd.DataFrame,
+    prob_col: str,
+    min_rows: int = 120,
+    baseline_prob_col: str = "implied_p1_no_vig",
+) -> list[dict]:
+    """Score rank-context interactions with market-favorite probability pressure.
+
+    Market-favorite pressure buckets explain probability sizing, but can smear
+    together very different tennis contexts. This diagnostic asks whether the
+    baseline favorite is also the higher-ranked player, what rank tier they are in,
+    and whether the model is under/over-pricing that favorite versus the same
+    baseline probability column used for scoring.
+    """
+    required = {"result", prob_col, baseline_prob_col, "p1_rank", "p2_rank"}
+    if preds.empty or not required.issubset(preds.columns):
+        return []
+    df = _add_rank_favorite_pressure_bucket_columns(preds, prob_col, baseline_prob_col)
+    rows = []
+    segment_cols = [
+        "market_favorite_rank_advantage",
+        "market_favorite_rank_tier",
+        "favorite_rank_advantage__strength__pressure",
+        "favorite_rank_tier__strength__pressure",
+        "favorite_rank_advantage__tier__strength",
+    ]
+    for col in segment_cols:
+        for seg, g in df.groupby(col, dropna=False):
+            if len(g) < min_rows:
+                continue
+            m = metrics_for(g, prob_col, baseline_prob_col=baseline_prob_col)
+            market_fav_is_p1 = g["market_favorite_side"].eq("p1")
+            y = g["result"].astype(int)
+            market_fav_won = np.where(market_fav_is_p1, y.eq(1), y.eq(0))
+            rows.append({
+                "segment_col": col,
+                "segment": str(seg),
+                **m,
+                **segment_year_stability(g, prob_col, baseline_prob_col=baseline_prob_col),
+                "mean_market_favorite_rank": float(g["market_favorite_rank"].mean()),
+                "mean_market_underdog_rank": float(g["market_underdog_rank"].mean()),
+                "mean_market_favorite_prob": float(g["market_favorite_prob"].mean()),
+                "mean_model_favorite_prob": float(g["model_favorite_prob"].mean()),
+                "mean_model_minus_market_favorite_prob": float(g["model_minus_market_favorite_prob"].mean()),
+                "market_favorite_hit_rate": float(pd.Series(market_fav_won).mean()),
+                "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
+                "model_minus_market_brier": float(m["brier"] - m["market_brier"]),
+            })
+    return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
+
+
 def market_favorite_pressure_segments(
     preds: pd.DataFrame,
     prob_col: str,
@@ -3133,6 +3243,24 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     advanced_favorite_pressure_segments = market_favorite_pressure_segments(preds, "advanced_features_p1", min_rows=120)
     residual_favorite_pressure_segments = market_favorite_pressure_segments(preds, "residual_overlay_p1", min_rows=120)
     filtered_favorite_pressure_segments = market_favorite_pressure_segments(preds, "residual_overlay_filtered_p1", min_rows=120)
+    advanced_rank_favorite_pressure_vs_calibrated = rank_favorite_pressure_segments(
+        preds,
+        "advanced_features_p1",
+        min_rows=120,
+        baseline_prob_col="market_bin_recalibrated_p1",
+    )
+    residual_rank_favorite_pressure_vs_calibrated = rank_favorite_pressure_segments(
+        preds,
+        "residual_overlay_p1",
+        min_rows=120,
+        baseline_prob_col="market_bin_recalibrated_p1",
+    )
+    filtered_rank_favorite_pressure_vs_calibrated = rank_favorite_pressure_segments(
+        preds,
+        "residual_overlay_filtered_p1",
+        min_rows=120,
+        baseline_prob_col="market_bin_recalibrated_p1",
+    )
     advanced_disagreement_margin_segments = disagreement_margin_segments(preds, "advanced_features_p1", min_rows=120)
     residual_disagreement_margin_segments = disagreement_margin_segments(preds, "residual_overlay_p1", min_rows=120)
     filtered_disagreement_margin_segments = disagreement_margin_segments(preds, "residual_overlay_filtered_p1", min_rows=120)
@@ -3228,6 +3356,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_market_favorite_pressure_lags_calibrated_market": calibrated_market_favorite_pressure_diagnostics["advanced_features_p1_market_favorite_pressure_lags_calibrated_market"],
         "where_residual_overlay_market_favorite_pressure_lags_calibrated_market": calibrated_market_favorite_pressure_diagnostics["residual_overlay_p1_market_favorite_pressure_lags_calibrated_market"],
         "where_filtered_overlay_market_favorite_pressure_lags_calibrated_market": calibrated_market_favorite_pressure_diagnostics["residual_overlay_filtered_p1_market_favorite_pressure_lags_calibrated_market"],
+        "where_advanced_rank_favorite_pressure_lags_calibrated_market": advanced_rank_favorite_pressure_vs_calibrated[:40],
+        "where_residual_overlay_rank_favorite_pressure_lags_calibrated_market": residual_rank_favorite_pressure_vs_calibrated[:40],
+        "where_filtered_overlay_rank_favorite_pressure_lags_calibrated_market": filtered_rank_favorite_pressure_vs_calibrated[:40],
         "where_advanced_disagreement_margin_lags_market": advanced_disagreement_margin_segments[:40],
         "where_residual_overlay_disagreement_margin_lags_market": residual_disagreement_margin_segments[:40],
         "where_filtered_overlay_disagreement_margin_lags_market": filtered_disagreement_margin_segments[:40],
@@ -3270,6 +3401,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_market_favorite_pressure_stably_lags_calibrated_market": calibrated_market_favorite_pressure_diagnostics["advanced_features_p1_market_favorite_pressure_stably_lags_calibrated_market"],
         "where_residual_overlay_market_favorite_pressure_stably_lags_calibrated_market": calibrated_market_favorite_pressure_diagnostics["residual_overlay_p1_market_favorite_pressure_stably_lags_calibrated_market"],
         "where_filtered_overlay_market_favorite_pressure_stably_lags_calibrated_market": calibrated_market_favorite_pressure_diagnostics["residual_overlay_filtered_p1_market_favorite_pressure_stably_lags_calibrated_market"],
+        "where_advanced_rank_favorite_pressure_stably_lags_calibrated_market": summarize_segment_weaknesses(advanced_rank_favorite_pressure_vs_calibrated, min_rows=150, top_n=12),
+        "where_residual_overlay_rank_favorite_pressure_stably_lags_calibrated_market": summarize_segment_weaknesses(residual_rank_favorite_pressure_vs_calibrated, min_rows=150, top_n=12),
+        "where_filtered_overlay_rank_favorite_pressure_stably_lags_calibrated_market": summarize_segment_weaknesses(filtered_rank_favorite_pressure_vs_calibrated, min_rows=150, top_n=12),
         "where_advanced_disagreement_margin_stably_lags_market": summarize_segment_weaknesses(advanced_disagreement_margin_segments, min_rows=150, top_n=12),
         "where_residual_overlay_disagreement_margin_stably_lags_market": summarize_segment_weaknesses(residual_disagreement_margin_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_disagreement_margin_stably_lags_market": summarize_segment_weaknesses(filtered_disagreement_margin_segments, min_rows=150, top_n=12),
@@ -3297,6 +3431,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_market_favorite_pressure_beats_calibrated_market": calibrated_market_favorite_pressure_diagnostics["advanced_features_p1_market_favorite_pressure_beats_calibrated_market"],
         "where_residual_overlay_market_favorite_pressure_beats_calibrated_market": calibrated_market_favorite_pressure_diagnostics["residual_overlay_p1_market_favorite_pressure_beats_calibrated_market"],
         "where_filtered_overlay_market_favorite_pressure_beats_calibrated_market": calibrated_market_favorite_pressure_diagnostics["residual_overlay_filtered_p1_market_favorite_pressure_beats_calibrated_market"],
+        "where_advanced_rank_favorite_pressure_beats_calibrated_market": summarize_segment_strengths(advanced_rank_favorite_pressure_vs_calibrated, min_rows=150, top_n=12),
+        "where_residual_overlay_rank_favorite_pressure_beats_calibrated_market": summarize_segment_strengths(residual_rank_favorite_pressure_vs_calibrated, min_rows=150, top_n=12),
+        "where_filtered_overlay_rank_favorite_pressure_beats_calibrated_market": summarize_segment_strengths(filtered_rank_favorite_pressure_vs_calibrated, min_rows=150, top_n=12),
         "where_advanced_disagreement_margin_beats_market": summarize_segment_strengths(advanced_disagreement_margin_segments, min_rows=150, top_n=12),
         "where_residual_overlay_disagreement_margin_beats_market": summarize_segment_strengths(residual_disagreement_margin_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_disagreement_margin_beats_market": summarize_segment_strengths(filtered_disagreement_margin_segments, min_rows=150, top_n=12),
@@ -3370,6 +3507,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "market_favorite_pressure_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS market-favorite strength + model-vs-market favorite-pressure buckets, then applies those weights only to future matching rows; useful for testing favorite-probability shrinkage beyond agreement/disagreement splits",
             "calibrated_market_blend_diagnostics": "diagnostic-only reruns the agreement, disagreement-margin, and market-favorite-pressure blend policies against the stronger no-lookahead market_bin_recalibrated baseline so improvements must beat calibrated market, not just raw no-vig market",
             "calibrated_market_favorite_pressure_diagnostics": "reporting-only favorite-strength/favorite-pressure scans rerun against market_bin_recalibrated; stable weaknesses/strengths here survive the stronger reliability-adjusted market baseline rather than only raw no-vig market",
+            "rank_favorite_pressure_diagnostics": "reporting-only rank-context interaction scans from the calibrated-market favorite's perspective; separates favorite pricing damage by whether the favorite is higher/lower ranked and by rank tier before considering routing or shrinkage hypotheses",
             "calibrated_market_segment_diagnostics": "reporting-only one-way segment scans can now compare advanced/residual/filtered model probabilities against market_bin_recalibrated, exposing which apparent raw-market strengths still survive the stronger calibrated-market baseline",
             "calibrated_market_disagreement_diagnostics": "reporting-only disagreement scans can now use market_bin_recalibrated as the baseline pick/probability, exposing model overrides that only appear after market reliability-bin calibration changes the favorite side or probability quality baseline",
             "calibrated_market_agreement_sizing_diagnostics": "reporting-only agreement-only sizing scans can now use market_bin_recalibrated as the baseline pick/probability, exposing same-side probability-sizing damage that remains after the stronger calibrated-market baseline",
