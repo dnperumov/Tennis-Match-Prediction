@@ -222,6 +222,39 @@ class CalibrationSummaryTest(unittest.TestCase):
             pressure["overall_market_metrics"]["log_loss"],
         )
 
+    def test_agreement_sizing_segments_can_use_calibrated_market_baseline(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023]:
+            for i in range(80):
+                rows.append({
+                    "date": f"{year}-01-{(i % 28) + 1:02d}",
+                    "result": 1 if i % 2 == 0 else 0,
+                    "surface": "Hard",
+                    "model_p1": 0.70 if i % 2 == 0 else 0.30,
+                    "implied_p1_no_vig": 0.55 if i % 2 == 0 else 0.45,
+                    "market_bin_recalibrated_p1": 0.64 if i % 2 == 0 else 0.36,
+                })
+        preds = pd.DataFrame(rows)
+
+        segments = model_market_agreement_segments(
+            preds,
+            "model_p1",
+            segment_cols=["surface"],
+            min_rows=20,
+            baseline_prob_col="market_bin_recalibrated_p1",
+        )
+
+        self.assertEqual(segments[0]["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(segments[0]["agreement_rows"], 160)
+        self.assertEqual(segments[0]["disagreement_rows_excluded"], 0)
+        self.assertLess(segments[0]["market_log_loss"], metrics_for(preds, "model_p1")["market_log_loss"])
+        self.assertAlmostEqual(
+            segments[0]["mean_abs_probability_delta"],
+            0.06,
+        )
+
     def test_calibrated_market_favorite_pressure_diagnostics_compare_to_recalibrated_market(self) -> None:
         import pandas as pd
 
