@@ -33,6 +33,7 @@ from advanced_feature_model_research import (  # noqa: E402
     build_calibrated_market_favorite_pressure_diagnostics,
     build_calibrated_underperformance_risk_threshold_diagnostics,
     disagreement_margin_segments,
+    load_favorite_pressure_segments,
     metrics_for,
     player_involvement_segments,
     summarize_probability_quality_tradeoffs,
@@ -218,6 +219,39 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(segment["rows"], 8)
         self.assertEqual(segment["year_count"], 2)
         self.assertEqual(segment["years_model_beats_market_log_loss"], 2)
+        self.assertLess(segment["model_minus_market_log_loss"], 0)
+
+    def test_load_favorite_pressure_segments_use_favorite_perspective_and_calibrated_baseline(self) -> None:
+        import pandas as pd
+
+        preds = pd.DataFrame({
+            "date": pd.to_datetime(["2022-01-01"] * 4 + ["2023-01-01"] * 4),
+            "result": [1, 1, 1, 1, 1, 1, 1, 0],
+            "model_p1": [0.76, 0.76, 0.77, 0.77, 0.76, 0.76, 0.77, 0.77],
+            "market_bin_recalibrated_p1": [0.70, 0.70, 0.71, 0.71, 0.70, 0.70, 0.71, 0.71],
+            "p1_days_rest": [1, 1, 1, 1, 1, 1, 1, 1],
+            "p2_days_rest": [5, 5, 5, 5, 5, 5, 5, 5],
+            "p1_matches_last7": [3, 3, 3, 3, 3, 3, 3, 3],
+            "p2_matches_last7": [0, 0, 0, 0, 0, 0, 0, 0],
+        })
+
+        rows = load_favorite_pressure_segments(
+            preds,
+            "model_p1",
+            min_rows=4,
+            baseline_prob_col="market_bin_recalibrated_p1",
+        )
+
+        segment = next(row for row in rows if row["segment_col"] == "favorite_rest_context__strength__pressure")
+        self.assertEqual(segment["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(
+            segment["segment"],
+            "favorite_less_rest | solid_favorite | model_overprices_market_favorite_3_10pct",
+        )
+        self.assertEqual(segment["rows"], 8)
+        self.assertEqual(segment["year_count"], 2)
+        self.assertEqual(segment["mean_favorite_rest_diff"], -4.0)
+        self.assertEqual(segment["mean_favorite_matches_last7_diff"], 3.0)
         self.assertLess(segment["model_minus_market_log_loss"], 0)
 
     def test_calibrated_market_blend_diagnostics_use_bin_recalibrated_baseline(self) -> None:
