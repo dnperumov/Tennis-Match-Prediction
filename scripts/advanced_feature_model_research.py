@@ -2542,6 +2542,149 @@ def no_lookahead_agreement_sizing_blend_diagnostic(
     }
 
 
+def _stable_lagging_favorite_pressure_segments_from_training(
+    train: pd.DataFrame,
+    model_prob_col: str,
+    baseline_prob_col: str,
+    min_train_rows: int,
+    min_years: int,
+    min_stable_year_share: float,
+) -> dict[str, dict]:
+    """Find prior-year favorite-pressure buckets where model should fall back."""
+    flagged: dict[str, dict] = {}
+    if train.empty or "favorite_strength__pressure" not in train.columns:
+        return flagged
+    for segment, g in train.groupby("favorite_strength__pressure", dropna=False):
+        if len(g) < min_train_rows:
+            continue
+        m = metrics_for(g, model_prob_col, baseline_prob_col=baseline_prob_col)
+        log_loss_delta = float(m["log_loss"] - m["market_log_loss"])
+        brier_delta = float(m["brier"] - m["market_brier"])
+        if log_loss_delta <= 0 or brier_delta <= 0:
+            continue
+        stability = segment_year_stability(g, model_prob_col, baseline_prob_col=baseline_prob_col)
+        year_count = int(stability.get("year_count", 0))
+        if year_count:
+            required_stable_years = max(min_years, int(math.ceil(year_count * min_stable_year_share)))
+            if (
+                year_count < min_years
+                or int(stability.get("years_model_lags_market_log_loss", 0)) < required_stable_years
+                or int(stability.get("years_model_lags_market_brier", 0)) < required_stable_years
+            ):
+                continue
+        flagged[str(segment)] = {
+            "segment_col": "favorite_strength__pressure",
+            "segment": str(segment),
+            "train_rows": int(len(g)),
+            **m,
+            **stability,
+            "model_minus_market_log_loss": log_loss_delta,
+            "model_minus_market_brier": brier_delta,
+        }
+    return flagged
+
+
+def no_lookahead_market_favorite_pressure_fallback_routing_diagnostic(
+    preds: pd.DataFrame,
+    model_prob_col: str,
+    baseline_prob_col: str = "implied_p1_no_vig",
+    min_train_rows: int = 120,
+    min_years: int = 2,
+    min_stable_year_share: float = 0.60,
+) -> dict:
+    """Route prior-year stable favorite-pressure failures back to baseline.
+
+    This is a stricter policy test than the blend diagnostic: for each held-out
+    year, it uses only earlier OOS rows to identify market-favorite strength +
+    favorite-pressure buckets where the model stably trailed the chosen baseline
+    on both log loss and Brier, then routes only future rows in those matching
+    buckets to the baseline probability. Research-only; no betting execution.
+    """
+    routed_col = f"{model_prob_col}_market_favorite_pressure_fallback"
+    empty = {
+        "model": model_prob_col,
+        "baseline_probability_col": baseline_prob_col,
+        "routed_probability_col": routed_col,
+        "min_train_rows": int(min_train_rows),
+        "min_years": int(min_years),
+        "min_stable_year_share": float(min_stable_year_share),
+        "routed_rows": 0,
+        "overall_original_metrics": None,
+        "overall_market_metrics": None,
+        "overall_routed_metrics": None,
+        "overall_routed_minus_original_log_loss": None,
+        "overall_routed_minus_original_brier": None,
+        "overall_routed_minus_market_log_loss": None,
+        "overall_routed_minus_market_brier": None,
+        "yearly": [],
+        "note": "No rows/date/probability columns available for no-lookahead market-favorite-pressure fallback routing diagnostic.",
+    }
+    required = {"date", "result", model_prob_col, baseline_prob_col}
+    if preds.empty or not required.issubset(preds.columns):
+        return empty
+    df = _add_market_favorite_pressure_bucket_columns(preds, model_prob_col, baseline_prob_col)
+    df["_year"] = pd.to_datetime(df["date"], errors="coerce").dt.year
+    df = df.dropna(subset=["_year", "result", model_prob_col, baseline_prob_col]).copy()
+    if df.empty:
+        return empty
+    df[routed_col] = df[model_prob_col].astype(float)
+    df["_favorite_pressure_fallback_routed"] = False
+    yearly = []
+    for year in sorted(int(y) for y in df["_year"].dropna().unique()):
+        train = df[df["_year"] < year].copy()
+        test_mask = df["_year"].eq(year)
+        flagged = _stable_lagging_favorite_pressure_segments_from_training(
+            train=train,
+            model_prob_col=model_prob_col,
+            baseline_prob_col=baseline_prob_col,
+            min_train_rows=min_train_rows,
+            min_years=min_years,
+            min_stable_year_share=min_stable_year_share,
+        )
+        year_route_mask = test_mask & df["favorite_strength__pressure"].isin(flagged.keys())
+        df.loc[year_route_mask, routed_col] = df.loc[year_route_mask, baseline_prob_col]
+        df.loc[year_route_mask, "_favorite_pressure_fallback_routed"] = True
+        year_df = df.loc[test_mask].copy()
+        original_m = metrics_for(year_df, model_prob_col, baseline_prob_col=baseline_prob_col)
+        market_m = metrics_for(year_df, baseline_prob_col, baseline_prob_col=baseline_prob_col)
+        routed_m = metrics_for(year_df, routed_col, baseline_prob_col=baseline_prob_col)
+        yearly.append({
+            "year": int(year),
+            "rows": int(len(year_df)),
+            "prior_oos_pressure_rows": int(len(train)),
+            "routed_rows": int(year_route_mask.sum()),
+            "segments_flagged": sorted(flagged.keys()),
+            "original_metrics": original_m,
+            "market_metrics": market_m,
+            "routed_metrics": routed_m,
+            "routed_minus_original_log_loss": float(routed_m["log_loss"] - original_m["log_loss"]),
+            "routed_minus_original_brier": float(routed_m["brier"] - original_m["brier"]),
+            "routed_minus_market_log_loss": float(routed_m["log_loss"] - market_m["log_loss"]),
+            "routed_minus_market_brier": float(routed_m["brier"] - market_m["brier"]),
+        })
+    original_m = metrics_for(df, model_prob_col, baseline_prob_col=baseline_prob_col)
+    market_m = metrics_for(df, baseline_prob_col, baseline_prob_col=baseline_prob_col)
+    routed_m = metrics_for(df, routed_col, baseline_prob_col=baseline_prob_col)
+    return {
+        "model": model_prob_col,
+        "baseline_probability_col": baseline_prob_col,
+        "routed_probability_col": routed_col,
+        "min_train_rows": int(min_train_rows),
+        "min_years": int(min_years),
+        "min_stable_year_share": float(min_stable_year_share),
+        "routed_rows": int(df["_favorite_pressure_fallback_routed"].sum()),
+        "overall_original_metrics": original_m,
+        "overall_market_metrics": market_m,
+        "overall_routed_metrics": routed_m,
+        "overall_routed_minus_original_log_loss": float(routed_m["log_loss"] - original_m["log_loss"]),
+        "overall_routed_minus_original_brier": float(routed_m["brier"] - original_m["brier"]),
+        "overall_routed_minus_market_log_loss": float(routed_m["log_loss"] - market_m["log_loss"]),
+        "overall_routed_minus_market_brier": float(routed_m["brier"] - market_m["brier"]),
+        "yearly": yearly,
+        "note": "Research-only no-lookahead policy: route future rows in prior-OOS stable market-favorite-pressure failure buckets to the selected market baseline; no betting execution.",
+    }
+
+
 def no_lookahead_market_favorite_pressure_blend_diagnostic(
     preds: pd.DataFrame,
     model_prob_col: str,
@@ -3396,6 +3539,15 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     advanced_market_favorite_pressure_blend = no_lookahead_market_favorite_pressure_blend_diagnostic(preds, "advanced_features_p1")
     residual_market_favorite_pressure_blend = no_lookahead_market_favorite_pressure_blend_diagnostic(preds, "residual_overlay_p1")
     filtered_market_favorite_pressure_blend = no_lookahead_market_favorite_pressure_blend_diagnostic(preds, "residual_overlay_filtered_p1")
+    advanced_calibrated_favorite_pressure_fallback = no_lookahead_market_favorite_pressure_fallback_routing_diagnostic(
+        preds, "advanced_features_p1", baseline_prob_col="market_bin_recalibrated_p1"
+    )
+    residual_calibrated_favorite_pressure_fallback = no_lookahead_market_favorite_pressure_fallback_routing_diagnostic(
+        preds, "residual_overlay_p1", baseline_prob_col="market_bin_recalibrated_p1"
+    )
+    filtered_calibrated_favorite_pressure_fallback = no_lookahead_market_favorite_pressure_fallback_routing_diagnostic(
+        preds, "residual_overlay_filtered_p1", baseline_prob_col="market_bin_recalibrated_p1"
+    )
     residual_segment_tuned_risk_threshold = no_lookahead_underperformance_risk_threshold_diagnostic(preds, "residual_overlay_segment_tuned_p1")
     residual_overlay_risk_threshold = no_lookahead_underperformance_risk_threshold_diagnostic(preds, "residual_overlay_p1")
     calibrated_underperformance_risk_threshold_diagnostics = build_calibrated_underperformance_risk_threshold_diagnostics(
@@ -3572,6 +3724,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "advanced_market_favorite_pressure_blend_diagnostic": advanced_market_favorite_pressure_blend,
         "residual_overlay_market_favorite_pressure_blend_diagnostic": residual_market_favorite_pressure_blend,
         "filtered_overlay_market_favorite_pressure_blend_diagnostic": filtered_market_favorite_pressure_blend,
+        "advanced_calibrated_market_favorite_pressure_fallback_routing_diagnostic": advanced_calibrated_favorite_pressure_fallback,
+        "residual_overlay_calibrated_market_favorite_pressure_fallback_routing_diagnostic": residual_calibrated_favorite_pressure_fallback,
+        "filtered_overlay_calibrated_market_favorite_pressure_fallback_routing_diagnostic": filtered_calibrated_favorite_pressure_fallback,
         "calibrated_market_blend_diagnostics": calibrated_market_blend_diagnostics,
         "residual_segment_tuned_underperformance_risk_threshold_diagnostic": residual_segment_tuned_risk_threshold,
         "residual_overlay_underperformance_risk_threshold_diagnostic": residual_overlay_risk_threshold,
@@ -3616,6 +3771,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "disagreement_margin_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS model-vs-market disagreement direction+gap buckets, then applies those weights only to future override rows in matching buckets",
             "agreement_sizing_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS same-pick side+gap buckets, then applies those weights only to future model-market agreement rows; useful for testing probability-sizing shrinkage separate from side-selection overrides",
             "market_favorite_pressure_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS market-favorite strength + model-vs-market favorite-pressure buckets, then applies those weights only to future matching rows; useful for testing favorite-probability shrinkage beyond agreement/disagreement splits",
+            "calibrated_market_favorite_pressure_fallback_routing": "diagnostic-only no-lookahead policy that routes future rows in prior-OOS stable market-favorite-pressure failure buckets back to market_bin_recalibrated; useful for testing whether favorite-pricing damage is better handled as hard calibrated-market fallback rather than another blend",
             "calibrated_market_blend_diagnostics": "diagnostic-only reruns the agreement, disagreement-margin, and market-favorite-pressure blend policies against the stronger no-lookahead market_bin_recalibrated baseline so improvements must beat calibrated market, not just raw no-vig market",
             "calibrated_market_favorite_pressure_diagnostics": "reporting-only favorite-strength/favorite-pressure scans rerun against market_bin_recalibrated; stable weaknesses/strengths here survive the stronger reliability-adjusted market baseline rather than only raw no-vig market",
             "rank_favorite_pressure_diagnostics": "reporting-only rank-context interaction scans from the calibrated-market favorite's perspective; separates favorite pricing damage by whether the favorite is higher/lower ranked and by rank tier before considering routing or shrinkage hypotheses",

@@ -27,6 +27,7 @@ from advanced_feature_model_research import (  # noqa: E402
     no_lookahead_blend_weight_diagnostic,
     no_lookahead_agreement_sizing_blend_diagnostic,
     no_lookahead_market_favorite_pressure_blend_diagnostic,
+    no_lookahead_market_favorite_pressure_fallback_routing_diagnostic,
     no_lookahead_disagreement_margin_blend_diagnostic,
     no_lookahead_underperformance_risk_threshold_diagnostic,
     build_calibrated_market_blend_diagnostics,
@@ -393,6 +394,61 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertLess(
             diagnostic["overall_routed_metrics"]["log_loss"],
             diagnostic["overall_model_metrics"]["log_loss"],
+        )
+
+    def test_market_favorite_pressure_fallback_uses_prior_oos_years_and_calibrated_baseline(self) -> None:
+        import pandas as pd
+
+        rows = []
+        # 2022 establishes a stable calibrated-market favorite-pressure failure:
+        # model underprices the favorite and loses badly to the calibrated market.
+        for i in range(16):
+            rows.append({
+                "date": f"2022-01-{(i % 8) + 1:02d}",
+                "result": 1,
+                "model_p1": 0.56,
+                "implied_p1_no_vig": 0.70,
+                "market_bin_recalibrated_p1": 0.74,
+            })
+        # 2023 matching rows should be routed using only the 2022 OOS evidence.
+        for i in range(8):
+            rows.append({
+                "date": f"2023-01-{(i % 8) + 1:02d}",
+                "result": 1,
+                "model_p1": 0.56,
+                "implied_p1_no_vig": 0.70,
+                "market_bin_recalibrated_p1": 0.74,
+            })
+        # Different pressure bucket: should remain on the model, proving routing is segmented.
+        for i in range(8):
+            rows.append({
+                "date": f"2023-02-{(i % 8) + 1:02d}",
+                "result": 0,
+                "model_p1": 0.44,
+                "implied_p1_no_vig": 0.47,
+                "market_bin_recalibrated_p1": 0.46,
+            })
+
+        diagnostic = no_lookahead_market_favorite_pressure_fallback_routing_diagnostic(
+            pd.DataFrame(rows),
+            model_prob_col="model_p1",
+            baseline_prob_col="market_bin_recalibrated_p1",
+            min_train_rows=12,
+            min_years=1,
+        )
+
+        self.assertEqual(diagnostic["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(diagnostic["routed_probability_col"], "model_p1_market_favorite_pressure_fallback")
+        self.assertEqual(diagnostic["yearly"][0]["routed_rows"], 0)
+        self.assertEqual(diagnostic["yearly"][1]["routed_rows"], 8)
+        self.assertEqual(diagnostic["routed_rows"], 8)
+        self.assertLess(
+            diagnostic["overall_routed_metrics"]["log_loss"],
+            diagnostic["overall_original_metrics"]["log_loss"],
+        )
+        self.assertEqual(
+            diagnostic["overall_routed_metrics"]["baseline_probability_col"],
+            "market_bin_recalibrated_p1",
         )
 
     def test_underperformance_risk_threshold_uses_prior_oos_years_only(self) -> None:
