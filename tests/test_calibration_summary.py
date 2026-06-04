@@ -30,6 +30,7 @@ from advanced_feature_model_research import (  # noqa: E402
     no_lookahead_underperformance_risk_threshold_diagnostic,
     build_calibrated_market_blend_diagnostics,
     disagreement_margin_segments,
+    metrics_for,
     player_involvement_segments,
     summarize_probability_quality_tradeoffs,
     summarize_segment_strengths,
@@ -160,6 +161,34 @@ class CalibrationSummaryTest(unittest.TestCase):
             summary["warning"],
             "accuracy leader is not the log-loss leader; prioritize calibrated probability quality over accuracy-only gains",
         )
+
+    def test_segment_metrics_can_compare_against_calibrated_market_baseline(self) -> None:
+        import pandas as pd
+
+        preds = pd.DataFrame({
+            "date": pd.to_datetime(["2022-01-01"] * 80 + ["2023-01-01"] * 80),
+            "result": [1, 0] * 80,
+            "surface": ["Hard"] * 160,
+            "model_p1": [0.70, 0.30] * 80,
+            "implied_p1_no_vig": [0.55, 0.45] * 80,
+            "market_bin_recalibrated_p1": [0.65, 0.35] * 80,
+        })
+
+        raw_market_metrics = metrics_for(preds, "model_p1")
+        calibrated_metrics = metrics_for(preds, "model_p1", baseline_prob_col="market_bin_recalibrated_p1")
+        calibrated_segments = segment_errors(preds, "model_p1", baseline_prob_col="market_bin_recalibrated_p1")
+
+        self.assertLess(calibrated_metrics["market_log_loss"], raw_market_metrics["market_log_loss"])
+        self.assertEqual(calibrated_segments[0]["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertAlmostEqual(
+            calibrated_segments[0]["model_minus_market_log_loss"],
+            calibrated_metrics["log_loss"] - calibrated_metrics["market_log_loss"],
+        )
+        self.assertGreater(
+            calibrated_segments[0]["model_minus_market_log_loss"],
+            raw_market_metrics["log_loss"] - raw_market_metrics["market_log_loss"],
+        )
+        self.assertEqual(calibrated_segments[0]["years_model_beats_market_log_loss"], 2)
 
     def test_calibrated_market_blend_diagnostics_use_bin_recalibrated_baseline(self) -> None:
         import pandas as pd

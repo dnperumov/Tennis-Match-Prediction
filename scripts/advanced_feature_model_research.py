@@ -751,9 +751,10 @@ def fit_residual_overlay(
     return pred, diagnostics
 
 
-def metrics_for(df: pd.DataFrame, prob_col: str) -> dict:
+def metrics_for(df: pd.DataFrame, prob_col: str, baseline_prob_col: str = "implied_p1_no_vig") -> dict:
     y = df["result"].astype(int)
     p = df[prob_col].clip(1e-6, 1 - 1e-6)
+    baseline_p = df[baseline_prob_col].clip(1e-6, 1 - 1e-6)
     pred = (p >= 0.5).astype(int)
     return {
         "rows": int(len(df)),
@@ -761,8 +762,9 @@ def metrics_for(df: pd.DataFrame, prob_col: str) -> dict:
         "roc_auc": float(roc_auc_score(y, p)) if y.nunique() == 2 else None,
         "log_loss": float(log_loss(y, p, labels=[0, 1])),
         "brier": float(brier_score_loss(y, p)),
-        "market_log_loss": float(log_loss(y, df["implied_p1_no_vig"].clip(1e-6, 1 - 1e-6), labels=[0, 1])),
-        "market_brier": float(brier_score_loss(y, df["implied_p1_no_vig"].clip(1e-6, 1 - 1e-6))),
+        "market_log_loss": float(log_loss(y, baseline_p, labels=[0, 1])),
+        "market_brier": float(brier_score_loss(y, baseline_p)),
+        "baseline_probability_col": baseline_prob_col,
         "mean_prob": float(p.mean()),
         "actual_rate": float(y.mean()),
     }
@@ -1374,19 +1376,21 @@ DEFAULT_SEGMENT_COLS = [
 ]
 
 
-def segment_errors(preds: pd.DataFrame, prob_col: str) -> list[dict]:
+def segment_errors(preds: pd.DataFrame, prob_col: str, baseline_prob_col: str = "implied_p1_no_vig") -> list[dict]:
     rows = []
     df = _bucket_segment_diagnostics(preds)
+    if baseline_prob_col not in df.columns:
+        return rows
     for col in [c for c in DEFAULT_SEGMENT_COLS if c in df.columns]:
         for seg, g in df.groupby(col, dropna=False):
             if len(g) < 80:
                 continue
-            m = metrics_for(g, prob_col)
+            m = metrics_for(g, prob_col, baseline_prob_col=baseline_prob_col)
             rows.append({
                 "segment_col": col,
                 "segment": str(seg),
                 **m,
-                **segment_year_stability(g, prob_col),
+                **segment_year_stability(g, prob_col, baseline_prob_col=baseline_prob_col),
                 "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
                 "model_minus_market_brier": float(m["brier"] - m["market_brier"]),
             })
@@ -2621,7 +2625,7 @@ def multivariate_segment_errors(
     return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
 
 
-def segment_year_stability(g: pd.DataFrame, prob_col: str) -> dict:
+def segment_year_stability(g: pd.DataFrame, prob_col: str, baseline_prob_col: str = "implied_p1_no_vig") -> dict:
     """Summarize whether a segment's model-vs-market result persists across years."""
     empty = {
         "years": [],
@@ -2642,7 +2646,7 @@ def segment_year_stability(g: pd.DataFrame, prob_col: str) -> dict:
         return empty
     yearly = []
     for year, yg in tmp.groupby("_year"):
-        m = metrics_for(yg, prob_col)
+        m = metrics_for(yg, prob_col, baseline_prob_col=baseline_prob_col)
         yearly.append({
             "year": int(year),
             "rows": int(len(yg)),
@@ -2988,6 +2992,21 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     grand_slam_model_rows = grand_slam_benchmark.get("overall_model_comparison", []) if isinstance(grand_slam_benchmark, dict) else []
     advanced_segments = segment_errors(preds, "advanced_features_p1")
     residual_segments = segment_errors(preds, "residual_overlay_p1")
+    advanced_segments_vs_calibrated_market = segment_errors(
+        preds,
+        "advanced_features_p1",
+        baseline_prob_col="market_bin_recalibrated_p1",
+    )
+    residual_segments_vs_calibrated_market = segment_errors(
+        preds,
+        "residual_overlay_p1",
+        baseline_prob_col="market_bin_recalibrated_p1",
+    )
+    filtered_segments_vs_calibrated_market = segment_errors(
+        preds,
+        "residual_overlay_filtered_p1",
+        baseline_prob_col="market_bin_recalibrated_p1",
+    )
     advanced_interaction_segments = interaction_segment_errors(preds, "advanced_features_p1", min_rows=120)
     residual_interaction_segments = interaction_segment_errors(preds, "residual_overlay_p1", min_rows=120)
     advanced_multivariate_segments = multivariate_segment_errors(preds, "advanced_features_p1", min_rows=120)
@@ -3048,6 +3067,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "grand_slam_calibration_summary": summarize_calibration_diagnostics(grand_slam_model_rows, min_rows=20, top_n=12),
         "where_advanced_underperforms_market": advanced_segments[:40],
         "where_residual_overlay_underperforms_market": residual_segments[:40],
+        "where_advanced_underperforms_calibrated_market": advanced_segments_vs_calibrated_market[:40],
+        "where_residual_overlay_underperforms_calibrated_market": residual_segments_vs_calibrated_market[:40],
+        "where_filtered_overlay_underperforms_calibrated_market": filtered_segments_vs_calibrated_market[:40],
         "where_advanced_interactions_underperform_market": advanced_interaction_segments[:40],
         "where_residual_overlay_interactions_underperform_market": residual_interaction_segments[:40],
         "where_advanced_multivariate_underperform_market": advanced_multivariate_segments[:40],
@@ -3069,12 +3091,18 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_filtered_overlay_interaction_disagrees_with_market": filtered_interaction_disagreement_segments[:40],
         "where_advanced_stably_lags_market": summarize_segment_weaknesses(advanced_segments, min_rows=150, top_n=12),
         "where_residual_overlay_stably_lags_market": summarize_segment_weaknesses(residual_segments, min_rows=150, top_n=12),
+        "where_advanced_stably_lags_calibrated_market": summarize_segment_weaknesses(advanced_segments_vs_calibrated_market, min_rows=150, top_n=12),
+        "where_residual_overlay_stably_lags_calibrated_market": summarize_segment_weaknesses(residual_segments_vs_calibrated_market, min_rows=150, top_n=12),
+        "where_filtered_overlay_stably_lags_calibrated_market": summarize_segment_weaknesses(filtered_segments_vs_calibrated_market, min_rows=150, top_n=12),
         "where_advanced_interactions_stably_lag_market": summarize_segment_weaknesses(advanced_interaction_segments, min_rows=150, top_n=12),
         "where_residual_overlay_interactions_stably_lag_market": summarize_segment_weaknesses(residual_interaction_segments, min_rows=150, top_n=12),
         "where_advanced_multivariate_stably_lag_market": summarize_segment_weaknesses(advanced_multivariate_segments, min_rows=150, top_n=12),
         "where_residual_overlay_multivariate_stably_lag_market": summarize_segment_weaknesses(residual_multivariate_segments, min_rows=150, top_n=12),
         "where_advanced_beats_market": summarize_segment_strengths(advanced_segments, min_rows=150, top_n=12),
         "where_residual_overlay_beats_market": summarize_segment_strengths(residual_segments, min_rows=150, top_n=12),
+        "where_advanced_beats_calibrated_market": summarize_segment_strengths(advanced_segments_vs_calibrated_market, min_rows=150, top_n=12),
+        "where_residual_overlay_beats_calibrated_market": summarize_segment_strengths(residual_segments_vs_calibrated_market, min_rows=150, top_n=12),
+        "where_filtered_overlay_beats_calibrated_market": summarize_segment_strengths(filtered_segments_vs_calibrated_market, min_rows=150, top_n=12),
         "where_advanced_interactions_beat_market": summarize_segment_strengths(advanced_interaction_segments, min_rows=150, top_n=12),
         "where_residual_overlay_interactions_beat_market": summarize_segment_strengths(residual_interaction_segments, min_rows=150, top_n=12),
         "where_advanced_multivariate_beat_market": summarize_segment_strengths(advanced_multivariate_segments, min_rows=150, top_n=12),
@@ -3164,6 +3192,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "agreement_sizing_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS same-pick side+gap buckets, then applies those weights only to future model-market agreement rows; useful for testing probability-sizing shrinkage separate from side-selection overrides",
             "market_favorite_pressure_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS market-favorite strength + model-vs-market favorite-pressure buckets, then applies those weights only to future matching rows; useful for testing favorite-probability shrinkage beyond agreement/disagreement splits",
             "calibrated_market_blend_diagnostics": "diagnostic-only reruns the agreement, disagreement-margin, and market-favorite-pressure blend policies against the stronger no-lookahead market_bin_recalibrated baseline so improvements must beat calibrated market, not just raw no-vig market",
+            "calibrated_market_segment_diagnostics": "reporting-only one-way segment scans can now compare advanced/residual/filtered model probabilities against market_bin_recalibrated, exposing which apparent raw-market strengths still survive the stronger calibrated-market baseline",
             "clv": "live/pre-match odds snapshots and CLV storage are handled by scripts/odds_snapshot_store.py; not used in historical backtest until real snapshots exist",
         },
         "disclaimer": "Research only. No betting execution. Market-aware models use closing odds and must be adapted carefully for pre-match live odds/CLV tracking.",
