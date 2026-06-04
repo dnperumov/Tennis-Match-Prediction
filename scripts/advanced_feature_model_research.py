@@ -2154,6 +2154,35 @@ def no_lookahead_underperformance_risk_threshold_diagnostic(
     }
 
 
+def build_calibrated_underperformance_risk_threshold_diagnostics(
+    preds: pd.DataFrame,
+    model_prob_cols: list[str],
+    calibrated_market_col: str = "market_bin_recalibrated_p1",
+    risk_col: str = "underperformance_risk",
+    candidate_thresholds: list[float] | None = None,
+    min_train_rows: int = 1500,
+) -> dict:
+    """Rerun no-lookahead underperformance-risk routing against calibrated market.
+
+    The risk-threshold policy can look useful when it only routes weak feature rows
+    back to raw no-vig market. Once reliability-bin calibrated market probabilities
+    exist, this helper forces the same no-lookahead threshold selection to compare
+    against that stronger baseline before the policy is treated as risk control.
+    """
+    diagnostics = {}
+    for model_prob_col in model_prob_cols:
+        diagnostics[f"{model_prob_col}_underperformance_risk_threshold_vs_calibrated_market"] = (
+            no_lookahead_underperformance_risk_threshold_diagnostic(
+                preds,
+                model_prob_col=model_prob_col,
+                risk_col=risk_col,
+                baseline_prob_col=calibrated_market_col,
+                candidate_thresholds=candidate_thresholds,
+                min_train_rows=min_train_rows,
+            )
+        )
+    return diagnostics
+
 
 def _add_disagreement_margin_bucket_columns(
     df: pd.DataFrame,
@@ -3139,6 +3168,12 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     filtered_market_favorite_pressure_blend = no_lookahead_market_favorite_pressure_blend_diagnostic(preds, "residual_overlay_filtered_p1")
     residual_segment_tuned_risk_threshold = no_lookahead_underperformance_risk_threshold_diagnostic(preds, "residual_overlay_segment_tuned_p1")
     residual_overlay_risk_threshold = no_lookahead_underperformance_risk_threshold_diagnostic(preds, "residual_overlay_p1")
+    calibrated_underperformance_risk_threshold_diagnostics = build_calibrated_underperformance_risk_threshold_diagnostics(
+        preds,
+        ["residual_overlay_segment_tuned_p1", "residual_overlay_p1", "residual_overlay_filtered_p1"],
+        calibrated_market_col="market_bin_recalibrated_p1",
+        min_train_rows=1500,
+    )
     calibrated_market_blend_diagnostics = build_calibrated_market_blend_diagnostics(
         preds,
         ["advanced_features_p1", "residual_overlay_p1", "residual_overlay_filtered_p1"],
@@ -3292,6 +3327,16 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "calibrated_market_blend_diagnostics": calibrated_market_blend_diagnostics,
         "residual_segment_tuned_underperformance_risk_threshold_diagnostic": residual_segment_tuned_risk_threshold,
         "residual_overlay_underperformance_risk_threshold_diagnostic": residual_overlay_risk_threshold,
+        "calibrated_underperformance_risk_threshold_diagnostics": calibrated_underperformance_risk_threshold_diagnostics,
+        "residual_segment_tuned_underperformance_risk_threshold_vs_calibrated_market": calibrated_underperformance_risk_threshold_diagnostics[
+            "residual_overlay_segment_tuned_p1_underperformance_risk_threshold_vs_calibrated_market"
+        ],
+        "residual_overlay_underperformance_risk_threshold_vs_calibrated_market": calibrated_underperformance_risk_threshold_diagnostics[
+            "residual_overlay_p1_underperformance_risk_threshold_vs_calibrated_market"
+        ],
+        "filtered_overlay_underperformance_risk_threshold_vs_calibrated_market": calibrated_underperformance_risk_threshold_diagnostics[
+            "residual_overlay_filtered_p1_underperformance_risk_threshold_vs_calibrated_market"
+        ],
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
         "residual_overlay_underperformance_clusters": cluster_underperformance(preds, "residual_overlay_p1", n_clusters=8),
         "feature_notes": {
@@ -3311,7 +3356,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "paper_benchmark": "Grand Slam-only train-before-tournament expanding-window benchmark compares market, logistic, spline-logistic, random forest, XGBoost, linear SVM, advanced voting, and residual overlay with accuracy/log-loss/Brier",
             "statistically_enhanced_abilities": "pre-match ability covariates are estimated only from prior matches: surface ability, score-derived serve/return proxy, best-of-five/Slam ability, recent form ability, and fatigue-adjusted ability",
             "residual_overlay": "fits result - no-vig-market as target, applies segment-tuned shrinkage, and uses specialist residual models in early ATP250, post-title/final, surface-switch, Grand Slam, top10, and early-surface-switch buckets",
-            "underperformance_filter": "predicts rows where advanced features are likely worse than market; filtered overlay falls back to market when risk is high; no-lookahead risk-threshold diagnostics test whether the fixed cutoff should be changed using only prior OOS years",
+            "underperformance_filter": "predicts rows where advanced features are likely worse than market; filtered overlay falls back to market when risk is high; no-lookahead risk-threshold diagnostics test whether the fixed cutoff should be changed using only prior OOS years and now rerun the policy against market_bin_recalibrated before treating it as useful risk control",
             "model_market_disagreement": "diagnostic-only scans of rows where a model flips the no-vig market favorite, including two-way interaction disagreement buckets; useful for separating true model overrides from rows where model and market already agree",
             "model_market_agreement_sizing": "diagnostic-only scans of rows where model and no-vig market pick the same player; isolates probability-sizing/overconfidence damage from true side-selection overrides",
             "market_favorite_pressure": "diagnostic-only pre-match buckets from the no-vig market favorite's perspective; tests whether the model systematically underprices or overprices favorite probability versus market, independent of p1/p2 ordering",

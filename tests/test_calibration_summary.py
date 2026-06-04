@@ -30,6 +30,7 @@ from advanced_feature_model_research import (  # noqa: E402
     no_lookahead_underperformance_risk_threshold_diagnostic,
     build_calibrated_market_blend_diagnostics,
     build_calibrated_market_favorite_pressure_diagnostics,
+    build_calibrated_underperformance_risk_threshold_diagnostics,
     disagreement_margin_segments,
     metrics_for,
     player_involvement_segments,
@@ -291,6 +292,40 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertLess(
             strength_summary["top_segments"][0]["model_minus_market_log_loss"],
             0,
+        )
+
+    def test_calibrated_underperformance_risk_threshold_diagnostics_use_recalibrated_market(self) -> None:
+        import pandas as pd
+
+        preds = pd.DataFrame({
+            "date": pd.to_datetime([
+                "2022-01-01", "2022-01-02", "2022-01-03", "2022-01-04",
+                "2023-01-01", "2023-01-02", "2023-01-03", "2023-01-04",
+            ]),
+            "result": [1, 0, 0, 1, 1, 0, 0, 1],
+            "residual_overlay_p1": [0.90, 0.10, 0.90, 0.10, 0.90, 0.10, 0.90, 0.10],
+            "market_bin_recalibrated_p1": [0.60, 0.40, 0.60, 0.40, 0.60, 0.40, 0.60, 0.40],
+            "implied_p1_no_vig": [0.52, 0.48, 0.52, 0.48, 0.52, 0.48, 0.52, 0.48],
+            "underperformance_risk": [0.20, 0.20, 0.90, 0.90, 0.20, 0.20, 0.90, 0.90],
+        })
+
+        diagnostics = build_calibrated_underperformance_risk_threshold_diagnostics(
+            preds,
+            model_prob_cols=["residual_overlay_p1"],
+            calibrated_market_col="market_bin_recalibrated_p1",
+            risk_col="underperformance_risk",
+            candidate_thresholds=[0.0, 0.5, 1.0],
+            min_train_rows=4,
+        )
+
+        self.assertIn("residual_overlay_p1_underperformance_risk_threshold_vs_calibrated_market", diagnostics)
+        diagnostic = diagnostics["residual_overlay_p1_underperformance_risk_threshold_vs_calibrated_market"]
+        self.assertEqual(diagnostic["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(diagnostic["routed_probability_col"], "residual_overlay_p1_underperformance_risk_threshold")
+        self.assertEqual(diagnostic["overall_market_metrics"]["rows"], 8)
+        self.assertLess(
+            diagnostic["overall_routed_metrics"]["log_loss"],
+            diagnostic["overall_model_metrics"]["log_loss"],
         )
 
     def test_underperformance_risk_threshold_uses_prior_oos_years_only(self) -> None:
