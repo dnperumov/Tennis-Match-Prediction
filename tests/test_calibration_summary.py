@@ -26,6 +26,7 @@ from advanced_feature_model_research import (  # noqa: E402
     multivariate_segment_errors,
     no_lookahead_blend_weight_diagnostic,
     no_lookahead_agreement_sizing_blend_diagnostic,
+    no_lookahead_agreement_sizing_fallback_routing_diagnostic,
     no_lookahead_market_favorite_pressure_blend_diagnostic,
     no_lookahead_market_favorite_pressure_fallback_routing_diagnostic,
     no_lookahead_disagreement_margin_blend_diagnostic,
@@ -442,6 +443,70 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(diagnostic["yearly"][0]["routed_rows"], 0)
         self.assertEqual(diagnostic["yearly"][1]["routed_rows"], 8)
         self.assertEqual(diagnostic["routed_rows"], 8)
+        self.assertLess(
+            diagnostic["overall_routed_metrics"]["log_loss"],
+            diagnostic["overall_original_metrics"]["log_loss"],
+        )
+        self.assertEqual(
+            diagnostic["overall_routed_metrics"]["baseline_probability_col"],
+            "market_bin_recalibrated_p1",
+        )
+
+    def test_agreement_sizing_fallback_routes_prior_stable_calibrated_sizing_failures(self) -> None:
+        import pandas as pd
+
+        rows = []
+        # 2022 teaches that when model and calibrated market both pick p1 but the
+        # model is overconfident by 12-20 pct, calibrated market sizes probability better.
+        for i in range(14):
+            rows.append({
+                "date": f"2022-01-{i + 1:02d}",
+                "result": 0 if i < 8 else 1,
+                "model_p1": 0.76,
+                "market_bin_recalibrated_p1": 0.60,
+            })
+        # A same-year different agreement bucket should not be routed.
+        for i in range(4):
+            rows.append({
+                "date": f"2022-02-{i + 1:02d}",
+                "result": 1,
+                "model_p1": 0.61,
+                "market_bin_recalibrated_p1": 0.59,
+            })
+        # 2023 matching bucket should be routed using only prior OOS evidence.
+        for i in range(6):
+            rows.append({
+                "date": f"2023-01-{i + 1:02d}",
+                "result": 0 if i < 3 else 1,
+                "model_p1": 0.76,
+                "market_bin_recalibrated_p1": 0.60,
+            })
+        # Disagreement rows are out of scope for agreement-sizing fallback.
+        for i in range(3):
+            rows.append({
+                "date": f"2023-02-{i + 1:02d}",
+                "result": 1,
+                "model_p1": 0.48,
+                "market_bin_recalibrated_p1": 0.55,
+            })
+
+        diagnostic = no_lookahead_agreement_sizing_fallback_routing_diagnostic(
+            pd.DataFrame(rows),
+            model_prob_col="model_p1",
+            baseline_prob_col="market_bin_recalibrated_p1",
+            min_train_rows=12,
+            min_years=1,
+        )
+
+        self.assertEqual(diagnostic["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(diagnostic["routed_probability_col"], "model_p1_agreement_sizing_fallback")
+        self.assertEqual(diagnostic["yearly"][0]["routed_rows"], 0)
+        self.assertEqual(diagnostic["yearly"][1]["routed_rows"], 6)
+        self.assertEqual(diagnostic["routed_rows"], 6)
+        self.assertEqual(
+            diagnostic["yearly"][1]["segments_flagged"],
+            ["both_pick_p1 | large_gap_12_20pct"],
+        )
         self.assertLess(
             diagnostic["overall_routed_metrics"]["log_loss"],
             diagnostic["overall_original_metrics"]["log_loss"],
