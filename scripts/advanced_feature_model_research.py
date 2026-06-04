@@ -1397,14 +1397,21 @@ def segment_errors(preds: pd.DataFrame, prob_col: str, baseline_prob_col: str = 
     return sorted(rows, key=lambda r: r["model_minus_market_log_loss"], reverse=True)
 
 
-def player_involvement_segments(preds: pd.DataFrame, prob_col: str, min_rows: int = 80) -> list[dict]:
+def player_involvement_segments(
+    preds: pd.DataFrame,
+    prob_col: str,
+    min_rows: int = 80,
+    baseline_prob_col: str = "implied_p1_no_vig",
+) -> list[dict]:
     """Score model-vs-market quality for matches involving each player.
 
     This is a reporting-only diagnostic: it does not claim a player-specific edge.
     Instead, it finds recurring player contexts where the model's probability sizing
-    or side selection differs materially from the no-vig market across all OOS rows.
+    or side selection differs materially from the selected market baseline across
+    all OOS rows. ``baseline_prob_col`` lets the same player-context scan be
+    rerun against the stronger no-lookahead calibrated-market baseline.
     """
-    required = {"player1", "player2", "result", prob_col, "implied_p1_no_vig"}
+    required = {"player1", "player2", "result", prob_col, baseline_prob_col}
     if preds.empty or not required.issubset(preds.columns):
         return []
     df = preds.copy()
@@ -1415,12 +1422,12 @@ def player_involvement_segments(preds: pd.DataFrame, prob_col: str, min_rows: in
     for player, g in long.groupby("player", dropna=False):
         if len(g) < min_rows:
             continue
-        m = metrics_for(g, prob_col)
+        m = metrics_for(g, prob_col, baseline_prob_col=baseline_prob_col)
         rows.append({
             "segment_col": "player",
             "segment": str(player),
             **m,
-            **segment_year_stability(g, prob_col),
+            **segment_year_stability(g, prob_col, baseline_prob_col=baseline_prob_col),
             "player_rows_as_p1": int(g["_player_side"].eq("p1").sum()),
             "player_rows_as_p2": int(g["_player_side"].eq("p2").sum()),
             "model_minus_market_log_loss": float(m["log_loss"] - m["market_log_loss"]),
@@ -3905,6 +3912,15 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     advanced_player_segments = player_involvement_segments(preds, "advanced_features_p1", min_rows=80)
     residual_player_segments = player_involvement_segments(preds, "residual_overlay_p1", min_rows=80)
     filtered_player_segments = player_involvement_segments(preds, "residual_overlay_filtered_p1", min_rows=80)
+    advanced_player_segments_vs_calibrated = player_involvement_segments(
+        preds, "advanced_features_p1", min_rows=80, baseline_prob_col="market_bin_recalibrated_p1"
+    )
+    residual_player_segments_vs_calibrated = player_involvement_segments(
+        preds, "residual_overlay_p1", min_rows=80, baseline_prob_col="market_bin_recalibrated_p1"
+    )
+    filtered_player_segments_vs_calibrated = player_involvement_segments(
+        preds, "residual_overlay_filtered_p1", min_rows=80, baseline_prob_col="market_bin_recalibrated_p1"
+    )
     advanced_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "advanced_features_p1")
     residual_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "residual_overlay_p1")
     filtered_disagreement_fallback_routing = disagreement_fallback_routing_diagnostic(preds, "residual_overlay_filtered_p1")
@@ -4084,6 +4100,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_player_context_stably_lags_market": summarize_segment_weaknesses(advanced_player_segments, min_rows=80, top_n=12),
         "where_residual_overlay_player_context_stably_lags_market": summarize_segment_weaknesses(residual_player_segments, min_rows=80, top_n=12),
         "where_filtered_overlay_player_context_stably_lags_market": summarize_segment_weaknesses(filtered_player_segments, min_rows=80, top_n=12),
+        "where_advanced_player_context_stably_lags_calibrated_market": summarize_segment_weaknesses(advanced_player_segments_vs_calibrated, min_rows=80, top_n=12),
+        "where_residual_overlay_player_context_stably_lags_calibrated_market": summarize_segment_weaknesses(residual_player_segments_vs_calibrated, min_rows=80, top_n=12),
+        "where_filtered_overlay_player_context_stably_lags_calibrated_market": summarize_segment_weaknesses(filtered_player_segments_vs_calibrated, min_rows=80, top_n=12),
         "where_advanced_disagreement_beats_market": summarize_segment_strengths(advanced_disagreement_segments, min_rows=150, top_n=12),
         "where_residual_overlay_disagreement_beats_market": summarize_segment_strengths(residual_disagreement_segments, min_rows=150, top_n=12),
         "where_filtered_overlay_disagreement_beats_market": summarize_segment_strengths(filtered_disagreement_segments, min_rows=150, top_n=12),
@@ -4123,6 +4142,9 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "where_advanced_player_context_beats_market": summarize_segment_strengths(advanced_player_segments, min_rows=80, top_n=12),
         "where_residual_overlay_player_context_beats_market": summarize_segment_strengths(residual_player_segments, min_rows=80, top_n=12),
         "where_filtered_overlay_player_context_beats_market": summarize_segment_strengths(filtered_player_segments, min_rows=80, top_n=12),
+        "where_advanced_player_context_beats_calibrated_market": summarize_segment_strengths(advanced_player_segments_vs_calibrated, min_rows=80, top_n=12),
+        "where_residual_overlay_player_context_beats_calibrated_market": summarize_segment_strengths(residual_player_segments_vs_calibrated, min_rows=80, top_n=12),
+        "where_filtered_overlay_player_context_beats_calibrated_market": summarize_segment_strengths(filtered_player_segments_vs_calibrated, min_rows=80, top_n=12),
         "advanced_disagreement_fallback_routing_diagnostic": advanced_disagreement_fallback_routing,
         "residual_overlay_disagreement_fallback_routing_diagnostic": residual_disagreement_fallback_routing,
         "filtered_overlay_disagreement_fallback_routing_diagnostic": filtered_disagreement_fallback_routing,
@@ -4183,7 +4205,8 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "model_market_disagreement": "diagnostic-only scans of rows where a model flips the no-vig market favorite, including two-way interaction disagreement buckets; useful for separating true model overrides from rows where model and market already agree",
             "model_market_agreement_sizing": "diagnostic-only scans of rows where model and no-vig market pick the same player; isolates probability-sizing/overconfidence damage from true side-selection overrides",
             "market_favorite_pressure": "diagnostic-only pre-match buckets from the no-vig market favorite's perspective; tests whether the model systematically underprices or overprices favorite probability versus market, independent of p1/p2 ordering",
-            "player_context_segments": "diagnostic-only player-involvement scan over all OOS rows where a player appears on either side; surfaces recurring player contexts where model probability quality stably lags or beats no-vig market, for feature-gap/routing research only",
+            "player_context_segments": "diagnostic-only player-involvement scan over all OOS rows where a player appears on either side; surfaces recurring player contexts where model probability quality stably lags or beats no-vig or calibrated-market baselines, for feature-gap/routing research only",
+            "calibrated_market_player_context_diagnostics": "reporting-only player-context scans rerun against market_bin_recalibrated; exposes player-specific feature/routing hypotheses that survive the stronger reliability-adjusted market baseline rather than only raw no-vig market",
             "disagreement_margin": "diagnostic-only model-vs-market override scan by probability-gap size and override direction; tests whether bigger model-market disagreements are safer signals or stable damage clusters",
             "disagreement_fallback_routing": "no-lookahead diagnostic policy that uses only prior OOS years to identify stable model-damaging disagreement buckets and route those future bucket disagreements back to no-vig or calibrated-market probability",
             "calibrated_market_disagreement_fallback_routing": "diagnostic-only rerun of prior-year stable disagreement fallback routing against market_bin_recalibrated, so fallback policies are evaluated versus the stronger reliability-adjusted market baseline before being treated as useful risk control",

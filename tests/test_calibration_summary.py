@@ -198,6 +198,38 @@ class CalibrationSummaryTest(unittest.TestCase):
         )
         self.assertEqual(calibrated_segments[0]["years_model_beats_market_log_loss"], 2)
 
+    def test_player_involvement_segments_use_calibrated_market_baseline(self) -> None:
+        import pandas as pd
+
+        preds = pd.DataFrame({
+            "date": pd.to_datetime(["2022-01-01"] * 4 + ["2023-01-01"] * 4),
+            "player1": ["Target"] * 4 + ["Other"] * 4,
+            "player2": ["Other"] * 4 + ["Target"] * 4,
+            "result": [1, 0, 1, 0, 0, 1, 0, 1],
+            "model_p1": [0.70, 0.30, 0.70, 0.30, 0.30, 0.70, 0.30, 0.70],
+            "implied_p1_no_vig": [0.55, 0.45, 0.55, 0.45, 0.45, 0.55, 0.45, 0.55],
+            "market_bin_recalibrated_p1": [0.65, 0.35, 0.65, 0.35, 0.35, 0.65, 0.35, 0.65],
+        })
+
+        raw_rows = player_involvement_segments(preds, "model_p1", min_rows=4)
+        calibrated_rows = player_involvement_segments(
+            preds,
+            "model_p1",
+            min_rows=4,
+            baseline_prob_col="market_bin_recalibrated_p1",
+        )
+        target = next(row for row in calibrated_rows if row["segment"] == "Target")
+
+        self.assertEqual(target["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(target["player_rows_as_p1"], 4)
+        self.assertEqual(target["player_rows_as_p2"], 4)
+        self.assertLess(target["market_log_loss"], raw_rows[0]["market_log_loss"])
+        self.assertAlmostEqual(
+            target["model_minus_market_log_loss"],
+            target["log_loss"] - target["market_log_loss"],
+        )
+        self.assertEqual(target["years_model_beats_market_log_loss"], 2)
+
     def test_rank_favorite_pressure_segments_use_calibrated_baseline_and_single_class_years(self) -> None:
         import pandas as pd
 
