@@ -29,6 +29,7 @@ from advanced_feature_model_research import (  # noqa: E402
     no_lookahead_disagreement_margin_blend_diagnostic,
     no_lookahead_underperformance_risk_threshold_diagnostic,
     build_calibrated_market_blend_diagnostics,
+    build_calibrated_market_favorite_pressure_diagnostics,
     disagreement_margin_segments,
     metrics_for,
     player_involvement_segments,
@@ -219,6 +220,44 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertLessEqual(
             pressure["overall_blended_metrics"]["log_loss"],
             pressure["overall_market_metrics"]["log_loss"],
+        )
+
+    def test_calibrated_market_favorite_pressure_diagnostics_compare_to_recalibrated_market(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023, 2024]:
+            for i in range(40):
+                rows.append({
+                    "date": f"{year}-01-{(i % 28) + 1:02d}",
+                    "result": 1 if i % 2 == 0 else 0,
+                    "model_p1": 0.76 if i % 2 == 0 else 0.24,
+                    "implied_p1_no_vig": 0.58 if i % 2 == 0 else 0.42,
+                    "market_bin_recalibrated_p1": 0.70 if i % 2 == 0 else 0.30,
+                })
+        preds = pd.DataFrame(rows)
+
+        diagnostics = build_calibrated_market_favorite_pressure_diagnostics(
+            preds,
+            model_prob_cols=["model_p1"],
+            calibrated_market_col="market_bin_recalibrated_p1",
+            min_rows=20,
+            summary_min_rows=20,
+        )
+
+        self.assertIn("model_p1_market_favorite_pressure_lags_calibrated_market", diagnostics)
+        self.assertIn("model_p1_market_favorite_pressure_beats_calibrated_market", diagnostics)
+        lag_rows = diagnostics["model_p1_market_favorite_pressure_lags_calibrated_market"]
+        strength_summary = diagnostics["model_p1_market_favorite_pressure_beats_calibrated_market"]
+        self.assertTrue(lag_rows)
+        self.assertEqual(lag_rows[0]["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(
+            strength_summary["top_segments"][0]["baseline_probability_col"],
+            "market_bin_recalibrated_p1",
+        )
+        self.assertLess(
+            strength_summary["top_segments"][0]["model_minus_market_log_loss"],
+            0,
         )
 
     def test_underperformance_risk_threshold_uses_prior_oos_years_only(self) -> None:
