@@ -23,6 +23,7 @@ from advanced_feature_model_research import (  # noqa: E402
     market_favorite_pressure_segments,
     model_market_disagreement_segments,
     rank_favorite_pressure_segments,
+    rank_load_favorite_pressure_segments,
     multivariate_segment_errors,
     no_lookahead_blend_weight_diagnostic,
     no_lookahead_agreement_sizing_blend_diagnostic,
@@ -1548,6 +1549,42 @@ class CalibrationSummaryTest(unittest.TestCase):
             diagnostic["overall_blended_metrics"]["log_loss"],
             diagnostic["overall_model_metrics"]["log_loss"],
         )
+
+    def test_rank_load_favorite_pressure_segments_propagates_calibrated_baseline(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023]:
+            for i in range(4):
+                rows.append({
+                    "date": f"{year}-01-{i + 1:02d}",
+                    "result": 1,
+                    "model_p1": 0.55,
+                    "implied_p1_no_vig": 0.70,
+                    "market_bin_recalibrated_p1": 0.75,
+                    "p1_rank": 10,
+                    "p2_rank": 60,
+                    "p1_days_rest": 2,
+                    "p2_days_rest": 5,
+                    "p1_matches_last7": 3,
+                    "p2_matches_last7": 0,
+                })
+
+        segments = rank_load_favorite_pressure_segments(
+            pd.DataFrame(rows),
+            "model_p1",
+            min_rows=4,
+            baseline_prob_col="market_bin_recalibrated_p1",
+        )
+
+        self.assertTrue(segments)
+        top = segments[0]
+        self.assertEqual(top["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(top["segment_col"], "favorite_rank_advantage__load__strength__pressure")
+        self.assertIn("favorite_higher_rank", top["segment"])
+        self.assertIn("favorite_heavier_load", top["segment"])
+        self.assertGreater(top["model_minus_market_log_loss"], 0)
+        self.assertEqual(top["year_count"], 2)
 
     def test_summarize_shrinkage_sweeps_reports_multi_year_stability(self) -> None:
         sweeps = [
