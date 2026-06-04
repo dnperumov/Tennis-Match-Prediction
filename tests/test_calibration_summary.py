@@ -25,6 +25,7 @@ from advanced_feature_model_research import (  # noqa: E402
     multivariate_segment_errors,
     no_lookahead_blend_weight_diagnostic,
     no_lookahead_agreement_sizing_blend_diagnostic,
+    no_lookahead_market_favorite_pressure_blend_diagnostic,
     no_lookahead_disagreement_margin_blend_diagnostic,
     no_lookahead_underperformance_risk_threshold_diagnostic,
     disagreement_margin_segments,
@@ -1085,6 +1086,44 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(sweep["best_by_log_loss"]["shrink"], 1.0)
         self.assertLess(sweep["best_by_log_loss"]["log_loss"], sweep["baseline"]["log_loss"])
         self.assertLess(sweep["best_by_brier"]["brier"], sweep["baseline"]["brier"])
+
+    def test_market_favorite_pressure_blend_uses_prior_oos_bucket_weights(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023]:
+            for i in range(6):
+                rows.append({
+                    "date": f"{year}-01-{i + 1:02d}",
+                    "result": 1,
+                    "model_p1": 0.56,
+                    "implied_p1_no_vig": 0.78,
+                })
+            for i in range(6):
+                rows.append({
+                    "date": f"{year}-02-{i + 1:02d}",
+                    "result": 0,
+                    "model_p1": 0.44,
+                    "implied_p1_no_vig": 0.22,
+                })
+
+        diagnostic = no_lookahead_market_favorite_pressure_blend_diagnostic(
+            pd.DataFrame(rows),
+            model_prob_col="model_p1",
+            candidate_weights=[0.0, 1.0],
+            min_train_rows=10,
+        )
+
+        self.assertEqual(diagnostic["blended_probability_col"], "model_p1_market_favorite_pressure_blend")
+        self.assertEqual(diagnostic["yearly"][0]["prior_oos_pressure_rows"], 0)
+        self.assertEqual(diagnostic["yearly"][1]["prior_oos_pressure_rows"], 12)
+        self.assertEqual(diagnostic["yearly"][1]["selected_segments"][0]["selected_model_weight"], 0.0)
+        self.assertEqual(diagnostic["routed_rows"], 12)
+        self.assertLess(
+            diagnostic["overall_blended_metrics"]["log_loss"],
+            diagnostic["overall_model_metrics"]["log_loss"],
+        )
+
     def test_summarize_shrinkage_sweeps_reports_multi_year_stability(self) -> None:
         sweeps = [
             {
