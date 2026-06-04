@@ -851,6 +851,48 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(by_col["model_market_direction"]["segment"], "model_prefers_p1_market_prefers_p2")
         self.assertEqual(by_col["model_market_gap_bucket"]["year_count"], 3)
 
+    def test_disagreement_margin_segments_can_compare_to_calibrated_market_baseline(self) -> None:
+        import pandas as pd
+
+        rows = []
+        for year in [2022, 2023, 2024]:
+            for i in range(60):
+                rows.append({
+                    "date": f"{year}-04-{(i % 9) + 1:02d}",
+                    "result": 0,
+                    "model_p1": 0.53,
+                    "implied_p1_no_vig": 0.47,
+                    # Calibrated market is on the other side and should be the
+                    # baseline used for agreement/disagreement, gap buckets, and scoring.
+                    "market_bin_recalibrated_p1": 0.43,
+                })
+            # These rows disagree with raw no-vig market but agree with calibrated market;
+            # they must be excluded from calibrated-market disagreement diagnostics.
+            for i in range(20):
+                rows.append({
+                    "date": f"{year}-05-{(i % 9) + 1:02d}",
+                    "result": 1,
+                    "model_p1": 0.38,
+                    "implied_p1_no_vig": 0.51,
+                    "market_bin_recalibrated_p1": 0.47,
+                })
+
+        diagnostics = disagreement_margin_segments(
+            pd.DataFrame(rows),
+            "model_p1",
+            min_rows=100,
+            baseline_prob_col="market_bin_recalibrated_p1",
+        )
+
+        by_col = {row["segment_col"]: row for row in diagnostics}
+        gap = by_col["model_market_gap_bucket"]
+        self.assertEqual(gap["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(gap["segment"], "medium_gap_7_12pct")
+        self.assertEqual(gap["disagreement_rows"], 180)
+        self.assertEqual(gap["agreement_rows_excluded"], 60)
+        self.assertGreater(gap["model_minus_market_log_loss"], 0)
+        self.assertEqual(gap["years_model_lags_market_log_loss"], 3)
+
     def test_segment_errors_adds_year_stability_diagnostics(self) -> None:
         import pandas as pd
 
