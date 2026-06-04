@@ -28,6 +28,7 @@ from advanced_feature_model_research import (  # noqa: E402
     no_lookahead_market_favorite_pressure_blend_diagnostic,
     no_lookahead_disagreement_margin_blend_diagnostic,
     no_lookahead_underperformance_risk_threshold_diagnostic,
+    build_calibrated_market_blend_diagnostics,
     disagreement_margin_segments,
     player_involvement_segments,
     summarize_probability_quality_tradeoffs,
@@ -158,6 +159,37 @@ class CalibrationSummaryTest(unittest.TestCase):
         self.assertEqual(
             summary["warning"],
             "accuracy leader is not the log-loss leader; prioritize calibrated probability quality over accuracy-only gains",
+        )
+
+    def test_calibrated_market_blend_diagnostics_use_bin_recalibrated_baseline(self) -> None:
+        import pandas as pd
+
+        preds = pd.DataFrame({
+            "date": pd.to_datetime([
+                "2022-01-01", "2022-01-02", "2022-01-03", "2022-01-04",
+                "2023-01-01", "2023-01-02", "2023-01-03", "2023-01-04",
+            ]),
+            "result": [1, 1, 0, 0, 1, 1, 0, 0],
+            "model_p1": [0.70, 0.72, 0.30, 0.28, 0.70, 0.72, 0.30, 0.28],
+            "implied_p1_no_vig": [0.52, 0.52, 0.48, 0.48, 0.52, 0.52, 0.48, 0.48],
+            "market_bin_recalibrated_p1": [0.64, 0.64, 0.36, 0.36, 0.64, 0.64, 0.36, 0.36],
+        })
+
+        diagnostics = build_calibrated_market_blend_diagnostics(
+            preds,
+            model_prob_cols=["model_p1"],
+            min_train_rows=2,
+        )
+
+        self.assertIn("model_p1_market_favorite_pressure_blend_vs_calibrated_market", diagnostics)
+        self.assertIn("model_p1_agreement_sizing_blend_vs_calibrated_market", diagnostics)
+        self.assertIn("model_p1_disagreement_margin_blend_vs_calibrated_market", diagnostics)
+        pressure = diagnostics["model_p1_market_favorite_pressure_blend_vs_calibrated_market"]
+        self.assertEqual(pressure["baseline_probability_col"], "market_bin_recalibrated_p1")
+        self.assertEqual(pressure["routed_rows"], 4)
+        self.assertLessEqual(
+            pressure["overall_blended_metrics"]["log_loss"],
+            pressure["overall_market_metrics"]["log_loss"],
         )
 
     def test_underperformance_risk_threshold_uses_prior_oos_years_only(self) -> None:

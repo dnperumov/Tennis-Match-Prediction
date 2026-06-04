@@ -2527,6 +2527,48 @@ def no_lookahead_disagreement_margin_blend_diagnostic(
         "note": "Research-only no-lookahead policy: select model/market blend weights by prior OOS disagreement direction+gap buckets, then apply only to future model-vs-market override rows in the same buckets.",
     }
 
+def build_calibrated_market_blend_diagnostics(
+    preds: pd.DataFrame,
+    model_prob_cols: list[str],
+    calibrated_market_col: str = "market_bin_recalibrated_p1",
+    min_train_rows: int = 120,
+) -> dict:
+    """Run no-lookahead blend diagnostics against the calibrated-market baseline.
+
+    The standard routing diagnostics compare against raw no-vig market. Once the
+    walk-forward reliability-bin market recalibration exists, the stricter question
+    is whether any model blend improves on that stronger calibrated baseline. This
+    helper keeps those calibrated-market comparisons together and labels every key
+    explicitly so hourly reports do not confuse them with raw-market diagnostics.
+    """
+    diagnostics: dict[str, dict] = {}
+    for model_prob_col in model_prob_cols:
+        diagnostics[f"{model_prob_col}_market_favorite_pressure_blend_vs_calibrated_market"] = (
+            no_lookahead_market_favorite_pressure_blend_diagnostic(
+                preds,
+                model_prob_col,
+                baseline_prob_col=calibrated_market_col,
+                min_train_rows=min_train_rows,
+            )
+        )
+        diagnostics[f"{model_prob_col}_agreement_sizing_blend_vs_calibrated_market"] = (
+            no_lookahead_agreement_sizing_blend_diagnostic(
+                preds,
+                model_prob_col,
+                baseline_prob_col=calibrated_market_col,
+                min_train_rows=min_train_rows,
+            )
+        )
+        diagnostics[f"{model_prob_col}_disagreement_margin_blend_vs_calibrated_market"] = (
+            no_lookahead_disagreement_margin_blend_diagnostic(
+                preds,
+                model_prob_col,
+                baseline_prob_col=calibrated_market_col,
+                min_train_rows=min_train_rows,
+            )
+        )
+    return diagnostics
+
 
 DEFAULT_MULTIVARIATE_SEGMENT_GROUPS = [
     ("series", "round_group", "rank_diff_bucket"),
@@ -2985,6 +3027,12 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
     filtered_market_favorite_pressure_blend = no_lookahead_market_favorite_pressure_blend_diagnostic(preds, "residual_overlay_filtered_p1")
     residual_segment_tuned_risk_threshold = no_lookahead_underperformance_risk_threshold_diagnostic(preds, "residual_overlay_segment_tuned_p1")
     residual_overlay_risk_threshold = no_lookahead_underperformance_risk_threshold_diagnostic(preds, "residual_overlay_p1")
+    calibrated_market_blend_diagnostics = build_calibrated_market_blend_diagnostics(
+        preds,
+        ["advanced_features_p1", "residual_overlay_p1", "residual_overlay_filtered_p1"],
+        calibrated_market_col="market_bin_recalibrated_p1",
+        min_train_rows=120,
+    )
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "years": years,
@@ -3082,6 +3130,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
         "advanced_market_favorite_pressure_blend_diagnostic": advanced_market_favorite_pressure_blend,
         "residual_overlay_market_favorite_pressure_blend_diagnostic": residual_market_favorite_pressure_blend,
         "filtered_overlay_market_favorite_pressure_blend_diagnostic": filtered_market_favorite_pressure_blend,
+        "calibrated_market_blend_diagnostics": calibrated_market_blend_diagnostics,
         "residual_segment_tuned_underperformance_risk_threshold_diagnostic": residual_segment_tuned_risk_threshold,
         "residual_overlay_underperformance_risk_threshold_diagnostic": residual_overlay_risk_threshold,
         "underperformance_clusters": cluster_underperformance(preds, "advanced_features_p1", n_clusters=8),
@@ -3114,6 +3163,7 @@ def run(years: list[int], test_years: list[int], paper_test_years: list[int] | N
             "disagreement_margin_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS model-vs-market disagreement direction+gap buckets, then applies those weights only to future override rows in matching buckets",
             "agreement_sizing_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS same-pick side+gap buckets, then applies those weights only to future model-market agreement rows; useful for testing probability-sizing shrinkage separate from side-selection overrides",
             "market_favorite_pressure_blend": "diagnostic-only no-lookahead policy that selects market/model blend weights inside prior OOS market-favorite strength + model-vs-market favorite-pressure buckets, then applies those weights only to future matching rows; useful for testing favorite-probability shrinkage beyond agreement/disagreement splits",
+            "calibrated_market_blend_diagnostics": "diagnostic-only reruns the agreement, disagreement-margin, and market-favorite-pressure blend policies against the stronger no-lookahead market_bin_recalibrated baseline so improvements must beat calibrated market, not just raw no-vig market",
             "clv": "live/pre-match odds snapshots and CLV storage are handled by scripts/odds_snapshot_store.py; not used in historical backtest until real snapshots exist",
         },
         "disclaimer": "Research only. No betting execution. Market-aware models use closing odds and must be adapted carefully for pre-match live odds/CLV tracking.",
