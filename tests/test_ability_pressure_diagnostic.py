@@ -7,6 +7,7 @@ from scripts.ability_pressure_diagnostic import (
     add_favorite_perspective_columns,
     bucket_numeric_signal,
     metrics_for,
+    no_lookahead_multi_segment_fallback_routing,
     no_lookahead_segment_fallback_routing,
     stable_segment_summary,
 )
@@ -84,6 +85,34 @@ class AbilityPressureDiagnosticTests(unittest.TestCase):
         self.assertEqual(got["routed_rows"], 8)
         self.assertEqual(got["yearly_routing"][-1]["year"], 2024)
         self.assertEqual(got["yearly_routing"][-1]["flagged_segments"], ["bad"])
+        self.assertLess(got["routed_metrics"]["log_loss"], got["model_metrics"]["log_loss"])
+        self.assertEqual(got["baseline_probability_col"], "baseline")
+    def test_no_lookahead_multi_segment_fallback_routes_union_once_per_row(self):
+        rows = []
+        # 2022/2023 establish bad segments in two different diagnostics. 2024 is
+        # the first year that may be routed, and rows matching either segment
+        # should be routed once, not double-counted.
+        for year in [2022, 2023, 2024]:
+            for _ in range(8):
+                rows.append({"year": year, "seg_a": "bad_a", "seg_b": "ok_b", "result": 1, "model": 0.55, "baseline": 0.80})
+                rows.append({"year": year, "seg_a": "ok_a", "seg_b": "bad_b", "result": 1, "model": 0.56, "baseline": 0.81})
+                rows.append({"year": year, "seg_a": "good_a", "seg_b": "good_b", "result": 1, "model": 0.82, "baseline": 0.70})
+        df = pd.DataFrame(rows)
+
+        got = no_lookahead_multi_segment_fallback_routing(
+            df,
+            segment_cols=["seg_a", "seg_b"],
+            model_col="model",
+            baseline_col="baseline",
+            min_train_rows=12,
+            min_train_years=2,
+            min_stable_year_share=1.0,
+        )
+
+        self.assertEqual(got["routed_rows"], 16)
+        self.assertEqual(got["yearly_routing"][-1]["year"], 2024)
+        self.assertIn("bad_a", got["yearly_routing"][-1]["flagged_segments_by_column"]["seg_a"])
+        self.assertIn("bad_b", got["yearly_routing"][-1]["flagged_segments_by_column"]["seg_b"])
         self.assertLess(got["routed_metrics"]["log_loss"], got["model_metrics"]["log_loss"])
         self.assertEqual(got["baseline_probability_col"], "baseline")
 

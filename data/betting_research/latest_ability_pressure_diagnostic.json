@@ -1,6 +1,6 @@
 {
   "baseline_probability_col": "market_bin_recalibrated_p1",
-  "generated_at": "2026-06-05T02:04:34.373804+00:00",
+  "generated_at": "2026-06-05T03:10:02.165765+00:00",
   "min_rows": 180,
   "min_years": 3,
   "model_probability_col": "residual_overlay_filtered_p1",
@@ -20,6 +20,224 @@
   },
   "research_only_guardrail": "No betting execution; historical model-quality diagnostics only.",
   "routing_diagnostics": {
+    "residual_overlay_filtered_p1_fallback_to_market_bin_recalibrated_p1_all_ability_strength_pressure_segments": {
+      "baseline_metrics": {
+        "accuracy": 0.6782476061350733,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20257238550298431,
+        "log_loss": 0.5886362912747438,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.503060056404116,
+        "model_minus_market_brier": 0.0,
+        "model_minus_market_log_loss": 0.0,
+        "roc_auc": 0.749434886443176,
+        "rows": 11801
+      },
+      "baseline_probability_col": "market_bin_recalibrated_p1",
+      "model_metrics": {
+        "accuracy": 0.678671299042454,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20305808405347564,
+        "log_loss": 0.5896029744186454,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5064924367926811,
+        "model_minus_market_brier": 0.0004856985504913258,
+        "model_minus_market_log_loss": 0.0009666831439015811,
+        "roc_auc": 0.7482324722426645,
+        "rows": 11801
+      },
+      "model_probability_col": "residual_overlay_filtered_p1",
+      "research_only_guardrail": "Historical no-lookahead diagnostic only; no betting execution.",
+      "routed_metrics": {
+        "accuracy": 0.6779086518091687,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.2029452006963731,
+        "log_loss": 0.5893344809630997,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.506015676380215,
+        "model_minus_market_brier": 0.0003728151933887758,
+        "model_minus_market_log_loss": 0.000698189688355888,
+        "roc_auc": 0.74855895899354,
+        "rows": 11801
+      },
+      "routed_minus_baseline_brier": 0.0003728151933887758,
+      "routed_minus_baseline_log_loss": 0.000698189688355888,
+      "routed_minus_model_brier": -0.00011288335710255004,
+      "routed_minus_model_log_loss": -0.00026849345554569304,
+      "routed_probability_col": "residual_overlay_filtered_p1_ability_pressure_multi_fallback",
+      "routed_rows": 3035,
+      "rows": 11801,
+      "segment_cols": [
+        "elo_diff_strength_pressure_segment",
+        "surface_elo_diff_strength_pressure_segment",
+        "serve_return_ability_diff_strength_pressure_segment",
+        "fatigue_adjusted_ability_diff_strength_pressure_segment",
+        "surface_ability_diff_strength_pressure_segment",
+        "recent_form_ability_diff_strength_pressure_segment"
+      ],
+      "yearly_routing": [
+        {
+          "flagged_segments_by_column": {},
+          "routed_rows": 0,
+          "train_rows": 0,
+          "year": 2022
+        },
+        {
+          "flagged_segments_by_column": {},
+          "routed_rows": 0,
+          "train_rows": 2622,
+          "year": 2023
+        },
+        {
+          "flagged_segments_by_column": {},
+          "routed_rows": 0,
+          "train_rows": 5321,
+          "year": 2024
+        },
+        {
+          "flagged_segments_by_column": {
+            "elo_diff_strength_pressure_segment": [
+              "fav_big_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_big_elo_edge | heavy_fav | model_slightly_lower_on_favorite",
+              "fav_big_elo_edge | overwhelming_fav | model_near_baseline_on_favorite",
+              "fav_elo_neutral | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_small_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_small_elo_edge | modest_fav | model_near_baseline_on_favorite",
+              "fav_small_elo_edge | near_pickem_fav | model_near_baseline_on_favorite"
+            ],
+            "fatigue_adjusted_ability_diff_strength_pressure_segment": [
+              "fav_big_fatigue_adj_deficit | near_pickem_fav | model_slightly_higher_on_favorite",
+              "fav_big_fatigue_adj_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_big_fatigue_adj_edge | heavy_fav | model_slightly_lower_on_favorite",
+              "fav_big_fatigue_adj_edge | modest_fav | model_near_baseline_on_favorite",
+              "fav_big_fatigue_adj_edge | modest_fav | model_slightly_higher_on_favorite",
+              "fav_big_fatigue_adj_edge | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_fatigue_adj_edge | near_pickem_fav | model_slightly_lower_on_favorite",
+              "fav_big_fatigue_adj_edge | overwhelming_fav | model_near_baseline_on_favorite",
+              "fav_big_fatigue_adj_edge | solid_fav | model_slightly_higher_on_favorite",
+              "fav_big_fatigue_adj_edge | solid_fav | model_slightly_lower_on_favorite"
+            ],
+            "recent_form_ability_diff_strength_pressure_segment": [
+              "fav_big_recent_form_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_recent_form_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_big_recent_form_edge | heavy_fav | model_slightly_lower_on_favorite",
+              "fav_big_recent_form_edge | modest_fav | model_slightly_higher_on_favorite",
+              "fav_big_recent_form_edge | modest_fav | model_slightly_lower_on_favorite",
+              "fav_big_recent_form_edge | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_recent_form_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+              "fav_big_recent_form_edge | overwhelming_fav | model_near_baseline_on_favorite",
+              "fav_big_recent_form_edge | solid_fav | model_slightly_higher_on_favorite",
+              "fav_big_recent_form_edge | solid_fav | model_slightly_lower_on_favorite"
+            ],
+            "serve_return_ability_diff_strength_pressure_segment": [
+              "fav_big_serve_return_deficit | modest_fav | model_near_baseline_on_favorite",
+              "fav_big_serve_return_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_big_serve_return_edge | modest_fav | model_slightly_higher_on_favorite",
+              "fav_big_serve_return_edge | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_serve_return_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+              "fav_big_serve_return_edge | near_pickem_fav | model_slightly_lower_on_favorite",
+              "fav_big_serve_return_edge | overwhelming_fav | model_near_baseline_on_favorite",
+              "fav_big_serve_return_edge | solid_fav | model_slightly_higher_on_favorite",
+              "fav_big_serve_return_edge | solid_fav | model_slightly_lower_on_favorite"
+            ],
+            "surface_ability_diff_strength_pressure_segment": [
+              "fav_big_surface_ability_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_surface_ability_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_big_surface_ability_edge | modest_fav | model_near_baseline_on_favorite",
+              "fav_big_surface_ability_edge | modest_fav | model_slightly_higher_on_favorite",
+              "fav_big_surface_ability_edge | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_surface_ability_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+              "fav_big_surface_ability_edge | overwhelming_fav | model_near_baseline_on_favorite",
+              "fav_big_surface_ability_edge | solid_fav | model_slightly_higher_on_favorite",
+              "fav_big_surface_ability_edge | solid_fav | model_slightly_lower_on_favorite"
+            ],
+            "surface_elo_diff_strength_pressure_segment": [
+              "fav_big_surface_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_big_surface_elo_edge | overwhelming_fav | model_near_baseline_on_favorite",
+              "fav_small_surface_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_small_surface_elo_edge | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_small_surface_elo_edge | solid_fav | model_near_baseline_on_favorite",
+              "fav_surface_elo_neutral | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_surface_elo_neutral | near_pickem_fav | model_slightly_lower_on_favorite"
+            ]
+          },
+          "routed_rows": 2070,
+          "train_rows": 8041,
+          "year": 2025
+        },
+        {
+          "flagged_segments_by_column": {
+            "elo_diff_strength_pressure_segment": [
+              "fav_big_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_big_elo_edge | heavy_fav | model_slightly_lower_on_favorite",
+              "fav_big_elo_edge | modest_fav | model_near_baseline_on_favorite",
+              "fav_elo_neutral | modest_fav | model_slightly_higher_on_favorite",
+              "fav_small_elo_edge | modest_fav | model_near_baseline_on_favorite",
+              "fav_small_elo_edge | near_pickem_fav | model_near_baseline_on_favorite"
+            ],
+            "fatigue_adjusted_ability_diff_strength_pressure_segment": [
+              "fav_big_fatigue_adj_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_fatigue_adj_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_big_fatigue_adj_edge | heavy_fav | model_slightly_lower_on_favorite",
+              "fav_big_fatigue_adj_edge | modest_fav | model_near_baseline_on_favorite",
+              "fav_big_fatigue_adj_edge | modest_fav | model_slightly_higher_on_favorite",
+              "fav_big_fatigue_adj_edge | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_fatigue_adj_edge | overwhelming_fav | model_near_baseline_on_favorite",
+              "fav_big_fatigue_adj_edge | solid_fav | model_slightly_higher_on_favorite",
+              "fav_big_fatigue_adj_edge | solid_fav | model_slightly_lower_on_favorite"
+            ],
+            "recent_form_ability_diff_strength_pressure_segment": [
+              "fav_big_recent_form_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_recent_form_edge | heavy_fav | model_slightly_lower_on_favorite",
+              "fav_big_recent_form_edge | modest_fav | model_slightly_higher_on_favorite",
+              "fav_big_recent_form_edge | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_recent_form_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+              "fav_big_recent_form_edge | near_pickem_fav | model_slightly_lower_on_favorite",
+              "fav_big_recent_form_edge | solid_fav | model_slightly_higher_on_favorite"
+            ],
+            "serve_return_ability_diff_strength_pressure_segment": [
+              "fav_big_serve_return_deficit | modest_fav | model_near_baseline_on_favorite",
+              "fav_big_serve_return_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_big_serve_return_edge | heavy_fav | model_slightly_lower_on_favorite",
+              "fav_big_serve_return_edge | modest_fav | model_slightly_higher_on_favorite",
+              "fav_big_serve_return_edge | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_serve_return_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+              "fav_big_serve_return_edge | solid_fav | model_slightly_higher_on_favorite",
+              "fav_big_serve_return_edge | solid_fav | model_slightly_lower_on_favorite"
+            ],
+            "surface_ability_diff_strength_pressure_segment": [
+              "fav_big_surface_ability_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_surface_ability_edge | heavy_fav | model_slightly_lower_on_favorite",
+              "fav_big_surface_ability_edge | modest_fav | model_near_baseline_on_favorite",
+              "fav_big_surface_ability_edge | modest_fav | model_slightly_higher_on_favorite",
+              "fav_big_surface_ability_edge | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_big_surface_ability_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+              "fav_big_surface_ability_edge | solid_fav | model_near_baseline_on_favorite",
+              "fav_big_surface_ability_edge | solid_fav | model_slightly_higher_on_favorite",
+              "fav_big_surface_ability_edge | solid_fav | model_slightly_lower_on_favorite"
+            ],
+            "surface_elo_diff_strength_pressure_segment": [
+              "fav_big_surface_elo_edge | heavy_fav | model_slightly_lower_on_favorite",
+              "fav_small_surface_elo_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_small_surface_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+              "fav_small_surface_elo_edge | modest_fav | model_slightly_higher_on_favorite",
+              "fav_small_surface_elo_edge | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_surface_elo_neutral | near_pickem_fav | model_near_baseline_on_favorite",
+              "fav_surface_elo_neutral | near_pickem_fav | model_slightly_lower_on_favorite"
+            ]
+          },
+          "routed_rows": 965,
+          "train_rows": 10643,
+          "year": 2026
+        }
+      ]
+    },
     "residual_overlay_filtered_p1_fallback_to_market_bin_recalibrated_p1_elo_diff_strength_pressure_segment": {
       "baseline_metrics": {
         "accuracy": 0.6782476061350733,
