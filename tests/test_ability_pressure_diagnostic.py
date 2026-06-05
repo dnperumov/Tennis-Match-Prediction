@@ -7,6 +7,7 @@ from scripts.ability_pressure_diagnostic import (
     add_favorite_perspective_columns,
     bucket_numeric_signal,
     metrics_for,
+    no_lookahead_segment_fallback_routing,
     stable_segment_summary,
 )
 
@@ -60,6 +61,31 @@ class AbilityPressureDiagnosticTests(unittest.TestCase):
         self.assertEqual(bad[0]["segment"], "stable_bad")
         self.assertEqual(good[0]["years_model_beats_market_log_loss"], 3)
         self.assertEqual(bad[0]["years_model_lags_market_brier"], 3)
+
+    def test_no_lookahead_segment_fallback_routes_only_after_prior_stable_lag(self):
+        rows = []
+        # 2022/2023 establish a stable bad segment, but cannot route themselves.
+        for year in [2022, 2023, 2024]:
+            for _ in range(8):
+                rows.append({"year": year, "segment": "bad", "result": 1, "model": 0.55, "baseline": 0.80})
+                rows.append({"year": year, "segment": "good", "result": 1, "model": 0.82, "baseline": 0.70})
+        df = pd.DataFrame(rows)
+
+        got = no_lookahead_segment_fallback_routing(
+            df,
+            segment_col="segment",
+            model_col="model",
+            baseline_col="baseline",
+            min_train_rows=12,
+            min_train_years=2,
+            min_stable_year_share=1.0,
+        )
+
+        self.assertEqual(got["routed_rows"], 8)
+        self.assertEqual(got["yearly_routing"][-1]["year"], 2024)
+        self.assertEqual(got["yearly_routing"][-1]["flagged_segments"], ["bad"])
+        self.assertLess(got["routed_metrics"]["log_loss"], got["model_metrics"]["log_loss"])
+        self.assertEqual(got["baseline_probability_col"], "baseline")
 
 
 if __name__ == "__main__":

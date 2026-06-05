@@ -183,6 +183,83 @@ def add_diagnostic_buckets(df: pd.DataFrame, signal_cols: Iterable[str]) -> pd.D
     return out
 
 
+def no_lookahead_segment_fallback_routing(
+    df: pd.DataFrame,
+    *,
+    segment_col: str,
+    model_col: str,
+    baseline_col: str,
+    actual_col: str = "result",
+    min_train_rows: int = 180,
+    min_train_years: int = 3,
+    min_stable_year_share: float = 0.6,
+) -> dict:
+    """Route future rows in prior-OOS stable lagging segments back to baseline.
+
+    For each held-out year, only earlier OOS years are scanned for stable lagging
+    ability-pressure segments. Matching current-year rows are routed to the selected
+    baseline probability. This is a diagnostic risk-control policy, not betting
+    execution or live model selection.
+    """
+    work = df.copy()
+    years = sorted(int(y) for y in pd.to_numeric(work["year"], errors="coerce").dropna().unique())
+    routed_col = f"{model_col}_ability_pressure_fallback"
+    work[routed_col] = clip_prob(work[model_col])
+    work["ability_pressure_fallback_routed"] = False
+    yearly_routing = []
+    for year in years:
+        train = work[work["year"] < year].copy()
+        current_mask = work["year"].eq(year)
+        if train.empty or int(train["year"].nunique()) < min_train_years:
+            yearly_routing.append({"year": int(year), "train_rows": int(len(train)), "flagged_segments": [], "routed_rows": 0})
+            continue
+        lagging = stable_segment_summary(
+            train,
+            segment_col,
+            model_col,
+            baseline_col,
+            actual_col=actual_col,
+            min_rows=min_train_rows,
+            min_years=min_train_years,
+            min_stable_year_share=min_stable_year_share,
+            direction="lags",
+            top_n=10_000,
+        )
+        flagged = sorted({row["segment"] for row in lagging})
+        route_mask = current_mask & work[segment_col].astype(str).isin(flagged)
+        work.loc[route_mask, routed_col] = clip_prob(work.loc[route_mask, baseline_col])
+        work.loc[route_mask, "ability_pressure_fallback_routed"] = True
+        yearly_routing.append(
+            {
+                "year": int(year),
+                "train_rows": int(len(train)),
+                "flagged_segments": flagged,
+                "routed_rows": int(route_mask.sum()),
+            }
+        )
+    model_metrics = metrics_for(work, model_col, baseline_col, actual_col=actual_col)
+    routed_metrics = metrics_for(work, routed_col, baseline_col, actual_col=actual_col)
+    baseline_metrics = metrics_for(work.assign(**{baseline_col: clip_prob(work[baseline_col])}), baseline_col, baseline_col, actual_col=actual_col)
+    return {
+        "segment_col": segment_col,
+        "model_probability_col": model_col,
+        "baseline_probability_col": baseline_col,
+        "routed_probability_col": routed_col,
+        "rows": int(len(work)),
+        "routed_rows": int(work["ability_pressure_fallback_routed"].sum()),
+        "model_metrics": model_metrics,
+        "routed_metrics": routed_metrics,
+        "baseline_metrics": baseline_metrics,
+        "routed_minus_model_log_loss": float(routed_metrics["log_loss"] - model_metrics["log_loss"]),
+        "routed_minus_model_brier": float(routed_metrics["brier"] - model_metrics["brier"]),
+        "routed_minus_baseline_log_loss": float(routed_metrics["log_loss"] - routed_metrics["market_log_loss"]),
+        "routed_minus_baseline_brier": float(routed_metrics["brier"] - routed_metrics["market_brier"]),
+        "yearly_routing": yearly_routing,
+        "research_only_guardrail": "Historical no-lookahead diagnostic only; no betting execution.",
+    }
+
+
+
 def build_report(
     df: pd.DataFrame,
     *,
@@ -208,6 +285,7 @@ def build_report(
         "min_years": min_years,
         "top_n": top_n,
         "sections": {},
+        "routing_diagnostics": {},
     }
     for col in signal_cols:
         for segment_col in [f"{col}_pressure_segment", f"{col}_strength_pressure_segment"]:
@@ -219,6 +297,15 @@ def build_report(
             report["sections"][f"where_{model_col}_ability_pressure_beats_{baseline_col}_{segment_col}"] = stable_segment_summary(
                 work, segment_col, model_col, baseline_col, min_rows=min_rows, min_years=min_years, direction="beats", top_n=top_n
             )
+            if segment_col.endswith("_strength_pressure_segment"):
+                report["routing_diagnostics"][f"{model_col}_fallback_to_{baseline_col}_{segment_col}"] = no_lookahead_segment_fallback_routing(
+                    work,
+                    segment_col=segment_col,
+                    model_col=model_col,
+                    baseline_col=baseline_col,
+                    min_train_rows=min_rows,
+                    min_train_years=min_years,
+                )
     return report
 
 

@@ -1,6 +1,6 @@
 {
   "baseline_probability_col": "market_bin_recalibrated_p1",
-  "generated_at": "2026-06-05T01:00:36.690817+00:00",
+  "generated_at": "2026-06-05T02:04:34.373804+00:00",
   "min_rows": 180,
   "min_years": 3,
   "model_probability_col": "residual_overlay_filtered_p1",
@@ -19,6 +19,640 @@
     "rows": 11801
   },
   "research_only_guardrail": "No betting execution; historical model-quality diagnostics only.",
+  "routing_diagnostics": {
+    "residual_overlay_filtered_p1_fallback_to_market_bin_recalibrated_p1_elo_diff_strength_pressure_segment": {
+      "baseline_metrics": {
+        "accuracy": 0.6782476061350733,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20257238550298431,
+        "log_loss": 0.5886362912747438,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.503060056404116,
+        "model_minus_market_brier": 0.0,
+        "model_minus_market_log_loss": 0.0,
+        "roc_auc": 0.749434886443176,
+        "rows": 11801
+      },
+      "baseline_probability_col": "market_bin_recalibrated_p1",
+      "model_metrics": {
+        "accuracy": 0.678671299042454,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20305808405347564,
+        "log_loss": 0.5896029744186454,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5064924367926811,
+        "model_minus_market_brier": 0.0004856985504913258,
+        "model_minus_market_log_loss": 0.0009666831439015811,
+        "roc_auc": 0.7482324722426645,
+        "rows": 11801
+      },
+      "model_probability_col": "residual_overlay_filtered_p1",
+      "research_only_guardrail": "Historical no-lookahead diagnostic only; no betting execution.",
+      "routed_metrics": {
+        "accuracy": 0.6784170832980256,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20302959518833275,
+        "log_loss": 0.5895165986662245,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5063004786803853,
+        "model_minus_market_brier": 0.00045720968534843087,
+        "model_minus_market_log_loss": 0.0008803073914807058,
+        "roc_auc": 0.7483276442726089,
+        "rows": 11801
+      },
+      "routed_minus_baseline_brier": 0.00045720968534843087,
+      "routed_minus_baseline_log_loss": 0.0008803073914807058,
+      "routed_minus_model_brier": -2.8488865142894948e-05,
+      "routed_minus_model_log_loss": -8.637575242087525e-05,
+      "routed_probability_col": "residual_overlay_filtered_p1_ability_pressure_fallback",
+      "routed_rows": 1374,
+      "rows": 11801,
+      "segment_col": "elo_diff_strength_pressure_segment",
+      "yearly_routing": [
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 0,
+          "year": 2022
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 2622,
+          "year": 2023
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 5321,
+          "year": 2024
+        },
+        {
+          "flagged_segments": [
+            "fav_big_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_big_elo_edge | heavy_fav | model_slightly_lower_on_favorite",
+            "fav_big_elo_edge | overwhelming_fav | model_near_baseline_on_favorite",
+            "fav_elo_neutral | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_small_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_small_elo_edge | modest_fav | model_near_baseline_on_favorite",
+            "fav_small_elo_edge | near_pickem_fav | model_near_baseline_on_favorite"
+          ],
+          "routed_rows": 1033,
+          "train_rows": 8041,
+          "year": 2025
+        },
+        {
+          "flagged_segments": [
+            "fav_big_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_big_elo_edge | heavy_fav | model_slightly_lower_on_favorite",
+            "fav_big_elo_edge | modest_fav | model_near_baseline_on_favorite",
+            "fav_elo_neutral | modest_fav | model_slightly_higher_on_favorite",
+            "fav_small_elo_edge | modest_fav | model_near_baseline_on_favorite",
+            "fav_small_elo_edge | near_pickem_fav | model_near_baseline_on_favorite"
+          ],
+          "routed_rows": 341,
+          "train_rows": 10643,
+          "year": 2026
+        }
+      ]
+    },
+    "residual_overlay_filtered_p1_fallback_to_market_bin_recalibrated_p1_fatigue_adjusted_ability_diff_strength_pressure_segment": {
+      "baseline_metrics": {
+        "accuracy": 0.6782476061350733,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20257238550298431,
+        "log_loss": 0.5886362912747438,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.503060056404116,
+        "model_minus_market_brier": 0.0,
+        "model_minus_market_log_loss": 0.0,
+        "roc_auc": 0.749434886443176,
+        "rows": 11801
+      },
+      "baseline_probability_col": "market_bin_recalibrated_p1",
+      "model_metrics": {
+        "accuracy": 0.678671299042454,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20305808405347564,
+        "log_loss": 0.5896029744186454,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5064924367926811,
+        "model_minus_market_brier": 0.0004856985504913258,
+        "model_minus_market_log_loss": 0.0009666831439015811,
+        "roc_auc": 0.7482324722426645,
+        "rows": 11801
+      },
+      "model_probability_col": "residual_overlay_filtered_p1",
+      "research_only_guardrail": "Historical no-lookahead diagnostic only; no betting execution.",
+      "routed_metrics": {
+        "accuracy": 0.6777391746462165,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.2029995351916568,
+        "log_loss": 0.58943710295323,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5061401355197686,
+        "model_minus_market_brier": 0.0004271496886724957,
+        "model_minus_market_log_loss": 0.000800811678486224,
+        "roc_auc": 0.7483917435326259,
+        "rows": 11801
+      },
+      "routed_minus_baseline_brier": 0.0004271496886724957,
+      "routed_minus_baseline_log_loss": 0.000800811678486224,
+      "routed_minus_model_brier": -5.854886181883012e-05,
+      "routed_minus_model_log_loss": -0.00016587146541535702,
+      "routed_probability_col": "residual_overlay_filtered_p1_ability_pressure_fallback",
+      "routed_rows": 2174,
+      "rows": 11801,
+      "segment_col": "fatigue_adjusted_ability_diff_strength_pressure_segment",
+      "yearly_routing": [
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 0,
+          "year": 2022
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 2622,
+          "year": 2023
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 5321,
+          "year": 2024
+        },
+        {
+          "flagged_segments": [
+            "fav_big_fatigue_adj_deficit | near_pickem_fav | model_slightly_higher_on_favorite",
+            "fav_big_fatigue_adj_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_big_fatigue_adj_edge | heavy_fav | model_slightly_lower_on_favorite",
+            "fav_big_fatigue_adj_edge | modest_fav | model_near_baseline_on_favorite",
+            "fav_big_fatigue_adj_edge | modest_fav | model_slightly_higher_on_favorite",
+            "fav_big_fatigue_adj_edge | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_fatigue_adj_edge | near_pickem_fav | model_slightly_lower_on_favorite",
+            "fav_big_fatigue_adj_edge | overwhelming_fav | model_near_baseline_on_favorite",
+            "fav_big_fatigue_adj_edge | solid_fav | model_slightly_higher_on_favorite",
+            "fav_big_fatigue_adj_edge | solid_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 1501,
+          "train_rows": 8041,
+          "year": 2025
+        },
+        {
+          "flagged_segments": [
+            "fav_big_fatigue_adj_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_fatigue_adj_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_big_fatigue_adj_edge | heavy_fav | model_slightly_lower_on_favorite",
+            "fav_big_fatigue_adj_edge | modest_fav | model_near_baseline_on_favorite",
+            "fav_big_fatigue_adj_edge | modest_fav | model_slightly_higher_on_favorite",
+            "fav_big_fatigue_adj_edge | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_fatigue_adj_edge | overwhelming_fav | model_near_baseline_on_favorite",
+            "fav_big_fatigue_adj_edge | solid_fav | model_slightly_higher_on_favorite",
+            "fav_big_fatigue_adj_edge | solid_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 673,
+          "train_rows": 10643,
+          "year": 2026
+        }
+      ]
+    },
+    "residual_overlay_filtered_p1_fallback_to_market_bin_recalibrated_p1_recent_form_ability_diff_strength_pressure_segment": {
+      "baseline_metrics": {
+        "accuracy": 0.6782476061350733,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20257238550298431,
+        "log_loss": 0.5886362912747438,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.503060056404116,
+        "model_minus_market_brier": 0.0,
+        "model_minus_market_log_loss": 0.0,
+        "roc_auc": 0.749434886443176,
+        "rows": 11801
+      },
+      "baseline_probability_col": "market_bin_recalibrated_p1",
+      "model_metrics": {
+        "accuracy": 0.678671299042454,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20305808405347564,
+        "log_loss": 0.5896029744186454,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5064924367926811,
+        "model_minus_market_brier": 0.0004856985504913258,
+        "model_minus_market_log_loss": 0.0009666831439015811,
+        "roc_auc": 0.7482324722426645,
+        "rows": 11801
+      },
+      "model_probability_col": "residual_overlay_filtered_p1",
+      "research_only_guardrail": "Historical no-lookahead diagnostic only; no betting execution.",
+      "routed_metrics": {
+        "accuracy": 0.6779933903906449,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20296573026552123,
+        "log_loss": 0.5893742964602736,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5062177782444144,
+        "model_minus_market_brier": 0.0003933447625369124,
+        "model_minus_market_log_loss": 0.0007380051855297998,
+        "roc_auc": 0.7484663727696919,
+        "rows": 11801
+      },
+      "routed_minus_baseline_brier": 0.0003933447625369124,
+      "routed_minus_baseline_log_loss": 0.0007380051855297998,
+      "routed_minus_model_brier": -9.23537879544134e-05,
+      "routed_minus_model_log_loss": -0.0002286779583717813,
+      "routed_probability_col": "residual_overlay_filtered_p1_ability_pressure_fallback",
+      "routed_rows": 1516,
+      "rows": 11801,
+      "segment_col": "recent_form_ability_diff_strength_pressure_segment",
+      "yearly_routing": [
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 0,
+          "year": 2022
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 2622,
+          "year": 2023
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 5321,
+          "year": 2024
+        },
+        {
+          "flagged_segments": [
+            "fav_big_recent_form_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_recent_form_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_big_recent_form_edge | heavy_fav | model_slightly_lower_on_favorite",
+            "fav_big_recent_form_edge | modest_fav | model_slightly_higher_on_favorite",
+            "fav_big_recent_form_edge | modest_fav | model_slightly_lower_on_favorite",
+            "fav_big_recent_form_edge | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_recent_form_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+            "fav_big_recent_form_edge | overwhelming_fav | model_near_baseline_on_favorite",
+            "fav_big_recent_form_edge | solid_fav | model_slightly_higher_on_favorite",
+            "fav_big_recent_form_edge | solid_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 1225,
+          "train_rows": 8041,
+          "year": 2025
+        },
+        {
+          "flagged_segments": [
+            "fav_big_recent_form_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_recent_form_edge | heavy_fav | model_slightly_lower_on_favorite",
+            "fav_big_recent_form_edge | modest_fav | model_slightly_higher_on_favorite",
+            "fav_big_recent_form_edge | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_recent_form_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+            "fav_big_recent_form_edge | near_pickem_fav | model_slightly_lower_on_favorite",
+            "fav_big_recent_form_edge | solid_fav | model_slightly_higher_on_favorite"
+          ],
+          "routed_rows": 291,
+          "train_rows": 10643,
+          "year": 2026
+        }
+      ]
+    },
+    "residual_overlay_filtered_p1_fallback_to_market_bin_recalibrated_p1_serve_return_ability_diff_strength_pressure_segment": {
+      "baseline_metrics": {
+        "accuracy": 0.6782476061350733,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20257238550298431,
+        "log_loss": 0.5886362912747438,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.503060056404116,
+        "model_minus_market_brier": 0.0,
+        "model_minus_market_log_loss": 0.0,
+        "roc_auc": 0.749434886443176,
+        "rows": 11801
+      },
+      "baseline_probability_col": "market_bin_recalibrated_p1",
+      "model_metrics": {
+        "accuracy": 0.678671299042454,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20305808405347564,
+        "log_loss": 0.5896029744186454,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5064924367926811,
+        "model_minus_market_brier": 0.0004856985504913258,
+        "model_minus_market_log_loss": 0.0009666831439015811,
+        "roc_auc": 0.7482324722426645,
+        "rows": 11801
+      },
+      "model_probability_col": "residual_overlay_filtered_p1",
+      "research_only_guardrail": "Historical no-lookahead diagnostic only; no betting execution.",
+      "routed_metrics": {
+        "accuracy": 0.6779086518091687,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20296709762804457,
+        "log_loss": 0.5893974137255046,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5062232869112013,
+        "model_minus_market_brier": 0.0003947121250602592,
+        "model_minus_market_log_loss": 0.000761122450760765,
+        "roc_auc": 0.7485132333223983,
+        "rows": 11801
+      },
+      "routed_minus_baseline_brier": 0.0003947121250602592,
+      "routed_minus_baseline_log_loss": 0.000761122450760765,
+      "routed_minus_model_brier": -9.098642543106661e-05,
+      "routed_minus_model_log_loss": -0.00020556069314081604,
+      "routed_probability_col": "residual_overlay_filtered_p1_ability_pressure_fallback",
+      "routed_rows": 1419,
+      "rows": 11801,
+      "segment_col": "serve_return_ability_diff_strength_pressure_segment",
+      "yearly_routing": [
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 0,
+          "year": 2022
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 2622,
+          "year": 2023
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 5321,
+          "year": 2024
+        },
+        {
+          "flagged_segments": [
+            "fav_big_serve_return_deficit | modest_fav | model_near_baseline_on_favorite",
+            "fav_big_serve_return_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_big_serve_return_edge | modest_fav | model_slightly_higher_on_favorite",
+            "fav_big_serve_return_edge | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_serve_return_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+            "fav_big_serve_return_edge | near_pickem_fav | model_slightly_lower_on_favorite",
+            "fav_big_serve_return_edge | overwhelming_fav | model_near_baseline_on_favorite",
+            "fav_big_serve_return_edge | solid_fav | model_slightly_higher_on_favorite",
+            "fav_big_serve_return_edge | solid_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 1050,
+          "train_rows": 8041,
+          "year": 2025
+        },
+        {
+          "flagged_segments": [
+            "fav_big_serve_return_deficit | modest_fav | model_near_baseline_on_favorite",
+            "fav_big_serve_return_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_big_serve_return_edge | heavy_fav | model_slightly_lower_on_favorite",
+            "fav_big_serve_return_edge | modest_fav | model_slightly_higher_on_favorite",
+            "fav_big_serve_return_edge | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_serve_return_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+            "fav_big_serve_return_edge | solid_fav | model_slightly_higher_on_favorite",
+            "fav_big_serve_return_edge | solid_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 369,
+          "train_rows": 10643,
+          "year": 2026
+        }
+      ]
+    },
+    "residual_overlay_filtered_p1_fallback_to_market_bin_recalibrated_p1_surface_ability_diff_strength_pressure_segment": {
+      "baseline_metrics": {
+        "accuracy": 0.6782476061350733,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20257238550298431,
+        "log_loss": 0.5886362912747438,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.503060056404116,
+        "model_minus_market_brier": 0.0,
+        "model_minus_market_log_loss": 0.0,
+        "roc_auc": 0.749434886443176,
+        "rows": 11801
+      },
+      "baseline_probability_col": "market_bin_recalibrated_p1",
+      "model_metrics": {
+        "accuracy": 0.678671299042454,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20305808405347564,
+        "log_loss": 0.5896029744186454,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5064924367926811,
+        "model_minus_market_brier": 0.0004856985504913258,
+        "model_minus_market_log_loss": 0.0009666831439015811,
+        "roc_auc": 0.7482324722426645,
+        "rows": 11801
+      },
+      "model_probability_col": "residual_overlay_filtered_p1",
+      "research_only_guardrail": "Historical no-lookahead diagnostic only; no betting execution.",
+      "routed_metrics": {
+        "accuracy": 0.6779086518091687,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20297109919335649,
+        "log_loss": 0.589409182521153,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5061803514135489,
+        "model_minus_market_brier": 0.0003987136903721711,
+        "model_minus_market_log_loss": 0.0007728912464092241,
+        "roc_auc": 0.7485037520333773,
+        "rows": 11801
+      },
+      "routed_minus_baseline_brier": 0.0003987136903721711,
+      "routed_minus_baseline_log_loss": 0.0007728912464092241,
+      "routed_minus_model_brier": -8.698486011915474e-05,
+      "routed_minus_model_log_loss": -0.00019379189749235692,
+      "routed_probability_col": "residual_overlay_filtered_p1_ability_pressure_fallback",
+      "routed_rows": 2163,
+      "rows": 11801,
+      "segment_col": "surface_ability_diff_strength_pressure_segment",
+      "yearly_routing": [
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 0,
+          "year": 2022
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 2622,
+          "year": 2023
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 5321,
+          "year": 2024
+        },
+        {
+          "flagged_segments": [
+            "fav_big_surface_ability_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_surface_ability_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_big_surface_ability_edge | modest_fav | model_near_baseline_on_favorite",
+            "fav_big_surface_ability_edge | modest_fav | model_slightly_higher_on_favorite",
+            "fav_big_surface_ability_edge | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_surface_ability_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+            "fav_big_surface_ability_edge | overwhelming_fav | model_near_baseline_on_favorite",
+            "fav_big_surface_ability_edge | solid_fav | model_slightly_higher_on_favorite",
+            "fav_big_surface_ability_edge | solid_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 1465,
+          "train_rows": 8041,
+          "year": 2025
+        },
+        {
+          "flagged_segments": [
+            "fav_big_surface_ability_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_surface_ability_edge | heavy_fav | model_slightly_lower_on_favorite",
+            "fav_big_surface_ability_edge | modest_fav | model_near_baseline_on_favorite",
+            "fav_big_surface_ability_edge | modest_fav | model_slightly_higher_on_favorite",
+            "fav_big_surface_ability_edge | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_big_surface_ability_edge | near_pickem_fav | model_slightly_higher_on_favorite",
+            "fav_big_surface_ability_edge | solid_fav | model_near_baseline_on_favorite",
+            "fav_big_surface_ability_edge | solid_fav | model_slightly_higher_on_favorite",
+            "fav_big_surface_ability_edge | solid_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 698,
+          "train_rows": 10643,
+          "year": 2026
+        }
+      ]
+    },
+    "residual_overlay_filtered_p1_fallback_to_market_bin_recalibrated_p1_surface_elo_diff_strength_pressure_segment": {
+      "baseline_metrics": {
+        "accuracy": 0.6782476061350733,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20257238550298431,
+        "log_loss": 0.5886362912747438,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.503060056404116,
+        "model_minus_market_brier": 0.0,
+        "model_minus_market_log_loss": 0.0,
+        "roc_auc": 0.749434886443176,
+        "rows": 11801
+      },
+      "baseline_probability_col": "market_bin_recalibrated_p1",
+      "model_metrics": {
+        "accuracy": 0.678671299042454,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20305808405347564,
+        "log_loss": 0.5896029744186454,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5064924367926811,
+        "model_minus_market_brier": 0.0004856985504913258,
+        "model_minus_market_log_loss": 0.0009666831439015811,
+        "roc_auc": 0.7482324722426645,
+        "rows": 11801
+      },
+      "model_probability_col": "residual_overlay_filtered_p1",
+      "research_only_guardrail": "Historical no-lookahead diagnostic only; no betting execution.",
+      "routed_metrics": {
+        "accuracy": 0.6785865604609779,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20301885857649402,
+        "log_loss": 0.5895018436592172,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5063404203807833,
+        "model_minus_market_brier": 0.0004464730735097011,
+        "model_minus_market_log_loss": 0.0008655523844733892,
+        "roc_auc": 0.7483383610023204,
+        "rows": 11801
+      },
+      "routed_minus_baseline_brier": 0.0004464730735097011,
+      "routed_minus_baseline_log_loss": 0.0008655523844733892,
+      "routed_minus_model_brier": -3.922547698162471e-05,
+      "routed_minus_model_log_loss": -0.00010113075942819183,
+      "routed_probability_col": "residual_overlay_filtered_p1_ability_pressure_fallback",
+      "routed_rows": 1123,
+      "rows": 11801,
+      "segment_col": "surface_elo_diff_strength_pressure_segment",
+      "yearly_routing": [
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 0,
+          "year": 2022
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 2622,
+          "year": 2023
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 5321,
+          "year": 2024
+        },
+        {
+          "flagged_segments": [
+            "fav_big_surface_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_big_surface_elo_edge | overwhelming_fav | model_near_baseline_on_favorite",
+            "fav_small_surface_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_small_surface_elo_edge | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_small_surface_elo_edge | solid_fav | model_near_baseline_on_favorite",
+            "fav_surface_elo_neutral | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_surface_elo_neutral | near_pickem_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 868,
+          "train_rows": 8041,
+          "year": 2025
+        },
+        {
+          "flagged_segments": [
+            "fav_big_surface_elo_edge | heavy_fav | model_slightly_lower_on_favorite",
+            "fav_small_surface_elo_deficit | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_small_surface_elo_edge | heavy_fav | model_near_baseline_on_favorite",
+            "fav_small_surface_elo_edge | modest_fav | model_slightly_higher_on_favorite",
+            "fav_small_surface_elo_edge | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_surface_elo_neutral | near_pickem_fav | model_near_baseline_on_favorite",
+            "fav_surface_elo_neutral | near_pickem_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 255,
+          "train_rows": 10643,
+          "year": 2026
+        }
+      ]
+    }
+  },
   "rows": 11801,
   "sections": {
     "where_residual_overlay_filtered_p1_ability_pressure_beats_market_bin_recalibrated_p1_elo_diff_pressure_segment": [
