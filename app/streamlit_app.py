@@ -13,12 +13,14 @@ SRC_PATH = ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
+from tennis_ml.dashboard_summary import build_dashboard_summary  # noqa: E402
 from tennis_ml.predict import predict_matchup  # noqa: E402
 
 EXPORT_PATH = ROOT / "data" / "exports" / "atp_matches_enriched_current.csv"
 DB_PATH = ROOT / "data" / "tennis_matches.sqlite"
 METRICS_PATH = ROOT / "data" / "betting_research" / "latest_metrics.json"
 ADVANCED_REPORT_PATH = ROOT / "data" / "betting_research" / "latest_advanced_feature_model_research.json"
+ABILITY_REPORT_PATH = ROOT / "data" / "betting_research" / "latest_ability_pressure_diagnostic.json"
 PRED_PATH = ROOT / "data" / "betting_research" / "latest_backtest_predictions.csv"
 NICHE_REPORT_PATH = ROOT / "data" / "betting_research" / "latest_niche_research.json"
 NICHE_SEGMENTS_PATH = ROOT / "data" / "betting_research" / "latest_niche_segments.csv"
@@ -41,6 +43,13 @@ def load_metrics() -> dict:
     if not METRICS_PATH.exists():
         return {}
     return json.loads(METRICS_PATH.read_text())
+
+
+@st.cache_data(ttl=60)
+def load_json_artifact(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text())
 
 
 @st.cache_data(ttl=60)
@@ -86,13 +95,17 @@ def db_counts() -> dict:
 
 current = load_current_export()
 metrics_payload = load_metrics()
+advanced_payload = load_json_artifact(ADVANCED_REPORT_PATH)
+ability_payload = load_json_artifact(ABILITY_REPORT_PATH)
+decision_summary = build_dashboard_summary(advanced_payload, ability_payload) if advanced_payload else {}
 preds = load_predictions()
 counts = db_counts()
 
 niche_report = load_niche_report()
 niche_segments = load_niche_segments()
 
-tab_matchup, tab_data, tab_model, tab_edges, tab_niches, tab_rows = st.tabs([
+tab_summary, tab_matchup, tab_data, tab_model, tab_edges, tab_niches, tab_rows = st.tabs([
+    "Research summary",
     "Matchup Breakdown",
     "Data",
     "Model",
@@ -100,6 +113,54 @@ tab_matchup, tab_data, tab_model, tab_edges, tab_niches, tab_rows = st.tabs([
     "Niche research",
     "Rows",
 ])
+
+with tab_summary:
+    st.subheader("Current all-data decision summary")
+    st.info("Research only. These metrics benchmark prediction quality and paper tracking; no betting execution.")
+    if not decision_summary:
+        st.warning("No advanced research artifact found. Run: `.venv/bin/python scripts/advanced_feature_model_research.py`")
+    else:
+        rec = decision_summary.get("automation_recommendation", {})
+        if rec.get("decision") == "continue":
+            st.success(rec.get("reason"))
+        else:
+            st.warning(rec.get("reason"))
+
+        best = decision_summary.get("current_best", {})
+        residual = decision_summary.get("residual_overlay_filtered", {})
+        ability = decision_summary.get("ability_routing", {})
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Best proper-score model", best.get("model", "n/a"))
+        c2.metric("Best log loss", best.get("log_loss", "n/a"))
+        c3.metric("Best Brier", best.get("brier", "n/a"))
+        c4.metric("Rows", best.get("rows", "n/a"))
+
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Calibrated vs raw market log-loss gain", best.get("beats_market_no_vig_by_log_loss", "n/a"))
+        m2.metric("Filtered overlay log-loss delta vs best", residual.get("log_loss_delta_vs_best", "n/a"))
+        m3.metric("Best ability routing delta vs calibrated", ability.get("best_routed_minus_baseline_log_loss", "n/a"))
+
+        st.subheader("Model comparison contract")
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    decision_summary.get("calibrated_market", {}),
+                    decision_summary.get("market_no_vig", {}),
+                    residual,
+                ]
+            ),
+            use_container_width=True,
+        )
+
+        gaps = decision_summary.get("top_calibration_gaps", [])
+        if gaps:
+            st.subheader("Largest material calibration gaps for current best")
+            st.dataframe(pd.DataFrame(gaps), use_container_width=True)
+
+        st.subheader("Known failure / success counts")
+        st.json(decision_summary.get("stable_failure_counts", {}))
+        with st.expander("Raw decision summary"):
+            st.json(decision_summary)
 
 with tab_matchup:
     st.subheader("Matchup Breakdown MVP")
