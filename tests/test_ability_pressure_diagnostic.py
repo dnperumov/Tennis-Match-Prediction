@@ -1,0 +1,66 @@
+import math
+import unittest
+
+import pandas as pd
+
+from scripts.ability_pressure_diagnostic import (
+    add_favorite_perspective_columns,
+    bucket_numeric_signal,
+    metrics_for,
+    stable_segment_summary,
+)
+
+
+class AbilityPressureDiagnosticTests(unittest.TestCase):
+    def test_favorite_perspective_flips_player_diff_and_pressure_for_p2_favorites(self):
+        df = pd.DataFrame(
+            {
+                "result": [1, 0],
+                "market_bin_recalibrated_p1": [0.70, 0.30],
+                "residual_overlay_filtered_p1": [0.75, 0.25],
+                "elo_diff": [100, 80],
+            }
+        )
+
+        out = add_favorite_perspective_columns(
+            df,
+            baseline_prob_col="market_bin_recalibrated_p1",
+            model_prob_col="residual_overlay_filtered_p1",
+            signal_cols=["elo_diff"],
+        )
+
+        self.assertEqual(out["favorite_side"].tolist(), ["p1", "p2"])
+        self.assertEqual(out["favorite_won"].tolist(), [1, 1])
+        self.assertAlmostEqual(out.loc[0, "favorite_elo_diff"], 100)
+        self.assertAlmostEqual(out.loc[1, "favorite_elo_diff"], -80)
+        self.assertAlmostEqual(out.loc[0, "model_minus_baseline_favorite_prob"], 0.05)
+        self.assertAlmostEqual(out.loc[1, "model_minus_baseline_favorite_prob"], 0.05)
+
+    def test_bucket_numeric_signal_uses_missing_sentinel(self):
+        got = bucket_numeric_signal(pd.Series([-250, -25, 0, 25, 250, float("nan")]), cuts=[-100, -20, 20, 100], labels=["very_low", "low", "neutral", "high", "very_high"])
+        self.assertEqual(got.tolist(), ["very_low", "low", "neutral", "high", "very_high", "missing"])
+
+    def test_metrics_for_handles_single_class_rows(self):
+        df = pd.DataFrame({"actual": [1, 1, 1], "model": [0.55, 0.65, 0.75], "baseline": [0.50, 0.60, 0.70]})
+        got = metrics_for(df, "model", "baseline", actual_col="actual")
+        self.assertEqual(got["rows"], 3)
+        self.assertTrue(math.isfinite(got["log_loss"]))
+        self.assertTrue(math.isfinite(got["market_log_loss"]))
+
+    def test_stable_segment_summary_requires_multiyear_proper_score_stability(self):
+        rows = []
+        for year in [2022, 2023, 2024]:
+            for _ in range(4):
+                rows.append({"year": year, "segment": "stable_good", "actual": 1, "model": 0.80, "baseline": 0.70})
+                rows.append({"year": year, "segment": "stable_bad", "actual": 1, "model": 0.60, "baseline": 0.70})
+        df = pd.DataFrame(rows)
+        good = stable_segment_summary(df, "segment", "model", "baseline", actual_col="actual", min_rows=6, min_years=3, min_stable_year_share=0.66, direction="beats")
+        bad = stable_segment_summary(df, "segment", "model", "baseline", actual_col="actual", min_rows=6, min_years=3, min_stable_year_share=0.66, direction="lags")
+        self.assertEqual(good[0]["segment"], "stable_good")
+        self.assertEqual(bad[0]["segment"], "stable_bad")
+        self.assertEqual(good[0]["years_model_beats_market_log_loss"], 3)
+        self.assertEqual(bad[0]["years_model_lags_market_brier"], 3)
+
+
+if __name__ == "__main__":
+    unittest.main()
