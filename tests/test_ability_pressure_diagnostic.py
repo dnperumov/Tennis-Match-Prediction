@@ -4,6 +4,7 @@ import unittest
 import pandas as pd
 
 from scripts.ability_pressure_diagnostic import (
+    add_ability_consensus_segments,
     add_favorite_perspective_columns,
     bucket_numeric_signal,
     metrics_for,
@@ -62,6 +63,31 @@ class AbilityPressureDiagnosticTests(unittest.TestCase):
         self.assertEqual(bad[0]["segment"], "stable_bad")
         self.assertEqual(good[0]["years_model_beats_market_log_loss"], 3)
         self.assertEqual(bad[0]["years_model_lags_market_brier"], 3)
+
+    def test_ability_consensus_segments_combine_multiple_favorite_side_signals(self):
+        df = pd.DataFrame(
+            {
+                "baseline_favorite_prob": [0.62, 0.78, 0.55],
+                "model_minus_baseline_favorite_prob": [0.05, -0.06, 0.0],
+                "favorite_elo_diff": [180, -180, 10],
+                "favorite_surface_elo_diff": [90, -90, float("nan")],
+                "favorite_serve_return_ability_diff": [0.05, -0.05, 0.0],
+                "favorite_fatigue_adjusted_ability_diff": [-0.01, -0.05, 0.0],
+            }
+        )
+
+        out = add_ability_consensus_segments(
+            df,
+            signal_cols=["elo_diff", "surface_elo_diff", "serve_return_ability_diff", "fatigue_adjusted_ability_diff"],
+        )
+
+        self.assertEqual(out["favorite_ability_support_count"].tolist(), [3, 0, 0])
+        self.assertEqual(out["favorite_ability_oppose_count"].tolist(), [0, 4, 0])
+        self.assertEqual(out["favorite_ability_consensus_bucket"].tolist(), ["ability_strongly_supports_favorite", "ability_strongly_opposes_favorite", "ability_split_or_neutral"])
+        self.assertEqual(
+            out["ability_consensus_pressure_segment"].tolist()[0],
+            "ability_strongly_supports_favorite | modest_fav | model_higher_on_favorite",
+        )
 
     def test_no_lookahead_segment_fallback_routes_only_after_prior_stable_lag(self):
         rows = []

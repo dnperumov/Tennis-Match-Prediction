@@ -1,6 +1,6 @@
 {
   "baseline_probability_col": "market_bin_recalibrated_p1",
-  "generated_at": "2026-06-05T03:10:02.165765+00:00",
+  "generated_at": "2026-06-05T04:14:23.387870+00:00",
   "min_rows": 180,
   "min_years": 3,
   "model_probability_col": "residual_overlay_filtered_p1",
@@ -20,6 +20,112 @@
   },
   "research_only_guardrail": "No betting execution; historical model-quality diagnostics only.",
   "routing_diagnostics": {
+    "residual_overlay_filtered_p1_fallback_to_market_bin_recalibrated_p1_ability_consensus_pressure_segment": {
+      "baseline_metrics": {
+        "accuracy": 0.6782476061350733,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20257238550298431,
+        "log_loss": 0.5886362912747438,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.503060056404116,
+        "model_minus_market_brier": 0.0,
+        "model_minus_market_log_loss": 0.0,
+        "roc_auc": 0.749434886443176,
+        "rows": 11801
+      },
+      "baseline_probability_col": "market_bin_recalibrated_p1",
+      "model_metrics": {
+        "accuracy": 0.678671299042454,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20305808405347564,
+        "log_loss": 0.5896029744186454,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5064924367926811,
+        "model_minus_market_brier": 0.0004856985504913258,
+        "model_minus_market_log_loss": 0.0009666831439015811,
+        "roc_auc": 0.7482324722426645,
+        "rows": 11801
+      },
+      "model_probability_col": "residual_overlay_filtered_p1",
+      "research_only_guardrail": "Historical no-lookahead diagnostic only; no betting execution.",
+      "routed_metrics": {
+        "accuracy": 0.6779933903906449,
+        "actual_rate": 0.508685704601305,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.20300268832242704,
+        "log_loss": 0.5894529772591048,
+        "market_brier": 0.20257238550298431,
+        "market_log_loss": 0.5886362912747438,
+        "mean_prob": 0.5062793425557766,
+        "model_minus_market_brier": 0.0004303028194427294,
+        "model_minus_market_log_loss": 0.0008166859843610208,
+        "roc_auc": 0.7483977627145953,
+        "rows": 11801
+      },
+      "routed_minus_baseline_brier": 0.0004303028194427294,
+      "routed_minus_baseline_log_loss": 0.0008166859843610208,
+      "routed_minus_model_brier": -5.539573104859641e-05,
+      "routed_minus_model_log_loss": -0.00014999715954056025,
+      "routed_probability_col": "residual_overlay_filtered_p1_ability_pressure_fallback",
+      "routed_rows": 1590,
+      "rows": 11801,
+      "segment_col": "ability_consensus_pressure_segment",
+      "yearly_routing": [
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 0,
+          "year": 2022
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 2622,
+          "year": 2023
+        },
+        {
+          "flagged_segments": [],
+          "routed_rows": 0,
+          "train_rows": 5321,
+          "year": 2024
+        },
+        {
+          "flagged_segments": [
+            "ability_strongly_supports_favorite | heavy_fav | model_near_baseline_on_favorite",
+            "ability_strongly_supports_favorite | heavy_fav | model_slightly_lower_on_favorite",
+            "ability_strongly_supports_favorite | modest_fav | model_near_baseline_on_favorite",
+            "ability_strongly_supports_favorite | modest_fav | model_slightly_higher_on_favorite",
+            "ability_strongly_supports_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+            "ability_strongly_supports_favorite | overwhelming_fav | model_near_baseline_on_favorite",
+            "ability_strongly_supports_favorite | solid_fav | model_slightly_higher_on_favorite",
+            "ability_strongly_supports_favorite | solid_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 1146,
+          "train_rows": 8041,
+          "year": 2025
+        },
+        {
+          "flagged_segments": [
+            "ability_mildly_opposes_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+            "ability_mildly_supports_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+            "ability_split_or_neutral | near_pickem_fav | model_near_baseline_on_favorite",
+            "ability_strongly_supports_favorite | heavy_fav | model_slightly_lower_on_favorite",
+            "ability_strongly_supports_favorite | modest_fav | model_near_baseline_on_favorite",
+            "ability_strongly_supports_favorite | modest_fav | model_slightly_higher_on_favorite",
+            "ability_strongly_supports_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+            "ability_strongly_supports_favorite | solid_fav | model_slightly_higher_on_favorite",
+            "ability_strongly_supports_favorite | solid_fav | model_slightly_lower_on_favorite"
+          ],
+          "routed_rows": 444,
+          "train_rows": 10643,
+          "year": 2026
+        }
+      ]
+    },
     "residual_overlay_filtered_p1_fallback_to_market_bin_recalibrated_p1_all_ability_strength_pressure_segments": {
       "baseline_metrics": {
         "accuracy": 0.6782476061350733,
@@ -79,7 +185,8 @@
         "serve_return_ability_diff_strength_pressure_segment",
         "fatigue_adjusted_ability_diff_strength_pressure_segment",
         "surface_ability_diff_strength_pressure_segment",
-        "recent_form_ability_diff_strength_pressure_segment"
+        "recent_form_ability_diff_strength_pressure_segment",
+        "ability_consensus_pressure_segment"
       ],
       "yearly_routing": [
         {
@@ -102,6 +209,16 @@
         },
         {
           "flagged_segments_by_column": {
+            "ability_consensus_pressure_segment": [
+              "ability_strongly_supports_favorite | heavy_fav | model_near_baseline_on_favorite",
+              "ability_strongly_supports_favorite | heavy_fav | model_slightly_lower_on_favorite",
+              "ability_strongly_supports_favorite | modest_fav | model_near_baseline_on_favorite",
+              "ability_strongly_supports_favorite | modest_fav | model_slightly_higher_on_favorite",
+              "ability_strongly_supports_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+              "ability_strongly_supports_favorite | overwhelming_fav | model_near_baseline_on_favorite",
+              "ability_strongly_supports_favorite | solid_fav | model_slightly_higher_on_favorite",
+              "ability_strongly_supports_favorite | solid_fav | model_slightly_lower_on_favorite"
+            ],
             "elo_diff_strength_pressure_segment": [
               "fav_big_elo_edge | heavy_fav | model_near_baseline_on_favorite",
               "fav_big_elo_edge | heavy_fav | model_slightly_lower_on_favorite",
@@ -173,6 +290,17 @@
         },
         {
           "flagged_segments_by_column": {
+            "ability_consensus_pressure_segment": [
+              "ability_mildly_opposes_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+              "ability_mildly_supports_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+              "ability_split_or_neutral | near_pickem_fav | model_near_baseline_on_favorite",
+              "ability_strongly_supports_favorite | heavy_fav | model_slightly_lower_on_favorite",
+              "ability_strongly_supports_favorite | modest_fav | model_near_baseline_on_favorite",
+              "ability_strongly_supports_favorite | modest_fav | model_slightly_higher_on_favorite",
+              "ability_strongly_supports_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+              "ability_strongly_supports_favorite | solid_fav | model_slightly_higher_on_favorite",
+              "ability_strongly_supports_favorite | solid_fav | model_slightly_lower_on_favorite"
+            ],
             "elo_diff_strength_pressure_segment": [
               "fav_big_elo_edge | heavy_fav | model_near_baseline_on_favorite",
               "fav_big_elo_edge | heavy_fav | model_slightly_lower_on_favorite",
@@ -873,6 +1001,172 @@
   },
   "rows": 11801,
   "sections": {
+    "where_residual_overlay_filtered_p1_ability_pressure_beats_market_bin_recalibrated_p1_ability_consensus_pressure_segment": [
+      {
+        "accuracy": 0.8203592814371258,
+        "actual_rate": 0.6377245508982036,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.14380669364230247,
+        "log_loss": 0.45807842074743294,
+        "market_brier": 0.14421017596602909,
+        "market_log_loss": 0.46065136192253636,
+        "mean_prob": 0.6095404192682485,
+        "min_year_rows": 22,
+        "model_minus_market_brier": -0.00040348232372661164,
+        "model_minus_market_log_loss": -0.002572941175103427,
+        "roc_auc": 0.8416171962906919,
+        "rows": 334,
+        "segment": "ability_strongly_supports_favorite | heavy_fav | model_slightly_higher_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_improvement": 0.8593623524845446,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.14940255587428936,
+            "log_loss": 0.46983513146948536,
+            "market_brier": 0.1492282517510714,
+            "market_log_loss": 0.4712180011376682,
+            "model_minus_market_brier": 0.00017430412321794986,
+            "model_minus_market_log_loss": -0.0013828696681828512,
+            "rows": 99,
+            "year": 2022
+          },
+          {
+            "brier": 0.12497084146148109,
+            "log_loss": 0.4125515048379545,
+            "market_brier": 0.12717318375866773,
+            "market_log_loss": 0.4210713993190988,
+            "model_minus_market_brier": -0.0022023422971866463,
+            "model_minus_market_log_loss": -0.008519894481144319,
+            "rows": 86,
+            "year": 2023
+          },
+          {
+            "brier": 0.13136890284411754,
+            "log_loss": 0.43196644280703517,
+            "market_brier": 0.13274820871957557,
+            "market_log_loss": 0.43659484882079297,
+            "model_minus_market_brier": -0.0013793058754580367,
+            "model_minus_market_log_loss": -0.004628406013757802,
+            "rows": 84,
+            "year": 2024
+          },
+          {
+            "brier": 0.20690347474721574,
+            "log_loss": 0.6069627485261658,
+            "market_brier": 0.20180007505459915,
+            "market_log_loss": 0.5919561816705179,
+            "model_minus_market_brier": 0.005103399692616584,
+            "model_minus_market_log_loss": 0.01500656685564794,
+            "rows": 43,
+            "year": 2025
+          },
+          {
+            "brier": 0.11642059210231172,
+            "log_loss": 0.39184116889469967,
+            "market_brier": 0.11942978573909592,
+            "market_log_loss": 0.4030340597853003,
+            "model_minus_market_brier": -0.003009193636784202,
+            "model_minus_market_log_loss": -0.01119289089060066,
+            "rows": 22,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 3,
+        "years_model_beats_market_log_loss": 4,
+        "years_model_lags_market_brier": 2,
+        "years_model_lags_market_log_loss": 1
+      },
+      {
+        "accuracy": 0.7231686541737649,
+        "actual_rate": 0.514480408858603,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.2005960578720703,
+        "log_loss": 0.5909125655493801,
+        "market_brier": 0.20077456924669893,
+        "market_log_loss": 0.5913353979743716,
+        "mean_prob": 0.5064883991628513,
+        "min_year_rows": 164,
+        "model_minus_market_brier": -0.00017851137462862599,
+        "model_minus_market_log_loss": -0.00042283242499152607,
+        "roc_auc": 0.7263157894736842,
+        "rows": 1174,
+        "segment": "ability_strongly_supports_favorite | solid_fav | model_near_baseline_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_improvement": 0.4964052669400516,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.19238605865655653,
+            "log_loss": 0.5728820383757398,
+            "market_brier": 0.19271123600797896,
+            "market_log_loss": 0.5736546143133787,
+            "model_minus_market_brier": -0.00032517735142242876,
+            "model_minus_market_log_loss": -0.0007725759376389085,
+            "rows": 164,
+            "year": 2022
+          },
+          {
+            "brier": 0.20325993232545153,
+            "log_loss": 0.5968849019470743,
+            "market_brier": 0.20315866315080466,
+            "market_log_loss": 0.5966248254809332,
+            "model_minus_market_brier": 0.00010126917464686747,
+            "model_minus_market_log_loss": 0.0002600764661411237,
+            "rows": 235,
+            "year": 2023
+          },
+          {
+            "brier": 0.2029302082678299,
+            "log_loss": 0.5956608580103281,
+            "market_brier": 0.2032048032093207,
+            "market_log_loss": 0.5963064865180416,
+            "model_minus_market_brier": -0.0002745949414907911,
+            "model_minus_market_log_loss": -0.0006456285077135471,
+            "rows": 303,
+            "year": 2024
+          },
+          {
+            "brier": 0.19973710066100717,
+            "log_loss": 0.5895543782110603,
+            "market_brier": 0.19950088477011654,
+            "market_log_loss": 0.5889987314197461,
+            "model_minus_market_brier": 0.00023621589089062311,
+            "model_minus_market_log_loss": 0.0005556467913141461,
+            "rows": 299,
+            "year": 2025
+          },
+          {
+            "brier": 0.2021568093806969,
+            "log_loss": 0.59392339099163,
+            "market_brier": 0.20312483139414947,
+            "market_log_loss": 0.5962432391735731,
+            "model_minus_market_brier": -0.0009680220134525575,
+            "model_minus_market_log_loss": -0.002319848181943085,
+            "rows": 173,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 3,
+        "years_model_beats_market_log_loss": 3,
+        "years_model_lags_market_brier": 2,
+        "years_model_lags_market_log_loss": 2
+      }
+    ],
     "where_residual_overlay_filtered_p1_ability_pressure_beats_market_bin_recalibrated_p1_elo_diff_pressure_segment": [
       {
         "accuracy": 0.8418367346938775,
@@ -3765,6 +4059,828 @@
         "years_model_beats_market_log_loss": 3,
         "years_model_lags_market_brier": 2,
         "years_model_lags_market_log_loss": 2
+      }
+    ],
+    "where_residual_overlay_filtered_p1_ability_pressure_stably_lags_market_bin_recalibrated_p1_ability_consensus_pressure_segment": [
+      {
+        "accuracy": 0.5643564356435643,
+        "actual_rate": 0.5412541254125413,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.2544363576768179,
+        "log_loss": 0.7032788038505727,
+        "market_brier": 0.25160737404483347,
+        "market_log_loss": 0.697016133185721,
+        "mean_prob": 0.5323743419790582,
+        "min_year_rows": 16,
+        "model_minus_market_brier": 0.0028289836319844164,
+        "model_minus_market_log_loss": 0.006262670664851755,
+        "roc_auc": 0.5584751710826461,
+        "rows": 303,
+        "segment": "ability_strongly_supports_favorite | modest_fav | model_slightly_higher_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_damage": 1.8975892114500819,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.25898699142513404,
+            "log_loss": 0.7126458002904323,
+            "market_brier": 0.2549908841957584,
+            "market_log_loss": 0.7038503873474534,
+            "model_minus_market_brier": 0.003996107229375656,
+            "model_minus_market_log_loss": 0.00879541294297892,
+            "rows": 99,
+            "year": 2022
+          },
+          {
+            "brier": 0.23267734768166792,
+            "log_loss": 0.6578930785382768,
+            "market_brier": 0.23191429466226327,
+            "market_log_loss": 0.6563158255864431,
+            "model_minus_market_brier": 0.0007630530194046581,
+            "model_minus_market_log_loss": 0.001577252951833752,
+            "rows": 86,
+            "year": 2023
+          },
+          {
+            "brier": 0.2618925567467094,
+            "log_loss": 0.7188763214989463,
+            "market_brier": 0.25913483428283896,
+            "market_log_loss": 0.7127112556573916,
+            "model_minus_market_brier": 0.00275772246387046,
+            "model_minus_market_log_loss": 0.00616506584155474,
+            "rows": 55,
+            "year": 2024
+          },
+          {
+            "brier": 0.2727560023474888,
+            "log_loss": 0.7413489201582848,
+            "market_brier": 0.2688945225620312,
+            "market_log_loss": 0.7327403285072295,
+            "model_minus_market_brier": 0.003861479785457589,
+            "model_minus_market_log_loss": 0.00860859165105532,
+            "rows": 47,
+            "year": 2025
+          },
+          {
+            "brier": 0.2637893495601945,
+            "log_loss": 0.7238213533623422,
+            "market_brier": 0.25986556332988814,
+            "market_log_loss": 0.7146015316528204,
+            "model_minus_market_brier": 0.00392378623030637,
+            "model_minus_market_log_loss": 0.009219821709521847,
+            "rows": 16,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 0,
+        "years_model_beats_market_log_loss": 0,
+        "years_model_lags_market_brier": 5,
+        "years_model_lags_market_log_loss": 5
+      },
+      {
+        "accuracy": 0.6877192982456141,
+        "actual_rate": 0.512280701754386,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.21668134645405704,
+        "log_loss": 0.62606313105502,
+        "market_brier": 0.21443420948753794,
+        "market_log_loss": 0.6202267512697484,
+        "mean_prob": 0.5328877651554483,
+        "min_year_rows": 12,
+        "model_minus_market_brier": 0.0022471369665190977,
+        "model_minus_market_log_loss": 0.005836379785271628,
+        "roc_auc": 0.6997142012417463,
+        "rows": 285,
+        "segment": "ability_strongly_supports_favorite | solid_fav | model_slightly_higher_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_damage": 1.663368238802414,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.2101000554064998,
+            "log_loss": 0.6105881634487618,
+            "market_brier": 0.2086511948259149,
+            "market_log_loss": 0.6071070093908416,
+            "model_minus_market_brier": 0.0014488605805849097,
+            "model_minus_market_log_loss": 0.003481154057920155,
+            "rows": 89,
+            "year": 2022
+          },
+          {
+            "brier": 0.2352641118197666,
+            "log_loss": 0.6654916117469382,
+            "market_brier": 0.2306627693514959,
+            "market_log_loss": 0.6540737217717113,
+            "model_minus_market_brier": 0.004601342468270708,
+            "model_minus_market_log_loss": 0.011417889975226858,
+            "rows": 84,
+            "year": 2023
+          },
+          {
+            "brier": 0.21754267558866414,
+            "log_loss": 0.6279893930741052,
+            "market_brier": 0.21465272425607307,
+            "market_log_loss": 0.6206336006525988,
+            "model_minus_market_brier": 0.0028899513325910675,
+            "model_minus_market_log_loss": 0.007355792421506413,
+            "rows": 51,
+            "year": 2024
+          },
+          {
+            "brier": 0.19205267739937873,
+            "log_loss": 0.5757531755445326,
+            "market_brier": 0.19338583688013408,
+            "market_log_loss": 0.5777515035032385,
+            "model_minus_market_brier": -0.0013331594807553526,
+            "model_minus_market_log_loss": -0.0019983279587058034,
+            "rows": 49,
+            "year": 2025
+          },
+          {
+            "brier": 0.23231964731466284,
+            "log_loss": 0.6620821473780528,
+            "market_brier": 0.2287438162274946,
+            "market_log_loss": 0.6523141951940322,
+            "model_minus_market_brier": 0.0035758310871682464,
+            "model_minus_market_log_loss": 0.0097679521840206,
+            "rows": 12,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 1,
+        "years_model_beats_market_log_loss": 1,
+        "years_model_lags_market_brier": 4,
+        "years_model_lags_market_log_loss": 4
+      },
+      {
+        "accuracy": 0.7387640449438202,
+        "actual_rate": 0.46629213483146065,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.1961900986466517,
+        "log_loss": 0.5818385108881086,
+        "market_brier": 0.19465559725296136,
+        "market_log_loss": 0.5784220297311862,
+        "mean_prob": 0.4975373094521041,
+        "min_year_rows": 24,
+        "model_minus_market_brier": 0.0015345013936903518,
+        "model_minus_market_log_loss": 0.0034164811569223907,
+        "roc_auc": 0.7374762206721623,
+        "rows": 356,
+        "segment": "ability_strongly_supports_favorite | solid_fav | model_slightly_lower_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_damage": 1.216267291864371,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.18685062482414094,
+            "log_loss": 0.5631641851294129,
+            "market_brier": 0.1838443667351869,
+            "market_log_loss": 0.5567878272060385,
+            "model_minus_market_brier": 0.0030062580889540502,
+            "model_minus_market_log_loss": 0.006376357923374432,
+            "rows": 89,
+            "year": 2022
+          },
+          {
+            "brier": 0.2255264293146037,
+            "log_loss": 0.6436960384076171,
+            "market_brier": 0.22769935227295088,
+            "market_log_loss": 0.6489632693679792,
+            "model_minus_market_brier": -0.002172922958347173,
+            "model_minus_market_log_loss": -0.005267230960362079,
+            "rows": 82,
+            "year": 2023
+          },
+          {
+            "brier": 0.16447870259940858,
+            "log_loss": 0.5138545022535898,
+            "market_brier": 0.15895248096363707,
+            "market_log_loss": 0.500299880194334,
+            "model_minus_market_brier": 0.005526221635771517,
+            "model_minus_market_log_loss": 0.013554622059255728,
+            "rows": 69,
+            "year": 2024
+          },
+          {
+            "brier": 0.2044986021131201,
+            "log_loss": 0.5993666946448086,
+            "market_brier": 0.20413859567695922,
+            "market_log_loss": 0.5988655151674063,
+            "model_minus_market_brier": 0.00036000643616088124,
+            "model_minus_market_log_loss": 0.0005011794774023581,
+            "rows": 92,
+            "year": 2025
+          },
+          {
+            "brier": 0.18991251797065525,
+            "log_loss": 0.5680052369751759,
+            "market_brier": 0.18814271281122683,
+            "market_log_loss": 0.563867447749172,
+            "model_minus_market_brier": 0.001769805159428428,
+            "model_minus_market_log_loss": 0.004137789226003941,
+            "rows": 24,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 1,
+        "years_model_beats_market_log_loss": 1,
+        "years_model_lags_market_brier": 4,
+        "years_model_lags_market_log_loss": 4
+      },
+      {
+        "accuracy": 0.8092643051771117,
+        "actual_rate": 0.42779291553133514,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.1553850730396861,
+        "log_loss": 0.4901368391300513,
+        "market_brier": 0.15427994932111708,
+        "market_log_loss": 0.48703933790848225,
+        "mean_prob": 0.4276555654497682,
+        "min_year_rows": 39,
+        "model_minus_market_brier": 0.0011051237185690233,
+        "model_minus_market_log_loss": 0.0030975012215690434,
+        "roc_auc": 0.7991810737033668,
+        "rows": 367,
+        "segment": "ability_strongly_supports_favorite | heavy_fav | model_slightly_lower_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_damage": 1.136782948315839,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.15453098959010053,
+            "log_loss": 0.4890222569799776,
+            "market_brier": 0.15283215414510348,
+            "market_log_loss": 0.48464708451960004,
+            "model_minus_market_brier": 0.0016988354449970489,
+            "model_minus_market_log_loss": 0.004375172460377552,
+            "rows": 102,
+            "year": 2022
+          },
+          {
+            "brier": 0.16218257939739808,
+            "log_loss": 0.5069095021751739,
+            "market_brier": 0.1613200571756647,
+            "market_log_loss": 0.5049883950942534,
+            "model_minus_market_brier": 0.0008625222217333861,
+            "model_minus_market_log_loss": 0.0019211070809205255,
+            "rows": 95,
+            "year": 2023
+          },
+          {
+            "brier": 0.18002040592852125,
+            "log_loss": 0.5465707082087385,
+            "market_brier": 0.18236620263849132,
+            "market_log_loss": 0.5540931733518982,
+            "model_minus_market_brier": -0.002345796709970066,
+            "model_minus_market_log_loss": -0.0075224651431596845,
+            "rows": 64,
+            "year": 2024
+          },
+          {
+            "brier": 0.13634629077301105,
+            "log_loss": 0.4439842259923049,
+            "market_brier": 0.1342031913296832,
+            "market_log_loss": 0.43649917207107897,
+            "model_minus_market_brier": 0.002143099443327856,
+            "model_minus_market_log_loss": 0.007485053921225948,
+            "rows": 67,
+            "year": 2025
+          },
+          {
+            "brier": 0.13334124008729795,
+            "log_loss": 0.4388738096227151,
+            "market_brier": 0.12931808867715505,
+            "market_log_loss": 0.4263622880557925,
+            "model_minus_market_brier": 0.0040231514101428945,
+            "model_minus_market_log_loss": 0.01251152156692259,
+            "rows": 39,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 1,
+        "years_model_beats_market_log_loss": 1,
+        "years_model_lags_market_brier": 4,
+        "years_model_lags_market_log_loss": 4
+      },
+      {
+        "accuracy": 0.8071654373024236,
+        "actual_rate": 0.5131717597471022,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.15543597218963762,
+        "log_loss": 0.48958227176586844,
+        "market_brier": 0.15519862585696378,
+        "market_log_loss": 0.48871791580674756,
+        "mean_prob": 0.5118807282592146,
+        "min_year_rows": 109,
+        "model_minus_market_brier": 0.00023734633267383232,
+        "model_minus_market_log_loss": 0.0008643559591208771,
+        "roc_auc": 0.8180440367298685,
+        "rows": 949,
+        "segment": "ability_strongly_supports_favorite | heavy_fav | model_near_baseline_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_damage": 0.8202738052057124,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.1374716612192352,
+            "log_loss": 0.44776011548399364,
+            "market_brier": 0.13748681363823645,
+            "market_log_loss": 0.4476569463623923,
+            "model_minus_market_brier": -1.5152419001240869e-05,
+            "model_minus_market_log_loss": 0.00010316912160135416,
+            "rows": 178,
+            "year": 2022
+          },
+          {
+            "brier": 0.14915272314379455,
+            "log_loss": 0.47704691659298587,
+            "market_brier": 0.14883359444717922,
+            "market_log_loss": 0.47566001735809027,
+            "model_minus_market_brier": 0.00031912869661532284,
+            "model_minus_market_log_loss": 0.0013868992348956,
+            "rows": 173,
+            "year": 2023
+          },
+          {
+            "brier": 0.1511396858150889,
+            "log_loss": 0.48044057094277437,
+            "market_brier": 0.15044981298224672,
+            "market_log_loss": 0.47830430140837815,
+            "model_minus_market_brier": 0.0006898728328421921,
+            "model_minus_market_log_loss": 0.002136269534396218,
+            "rows": 250,
+            "year": 2024
+          },
+          {
+            "brier": 0.1880655150914296,
+            "log_loss": 0.5633504677701818,
+            "market_brier": 0.18833971144395129,
+            "market_log_loss": 0.564122703011148,
+            "model_minus_market_brier": -0.00027419635252168284,
+            "model_minus_market_log_loss": -0.0007722352409661459,
+            "rows": 239,
+            "year": 2025
+          },
+          {
+            "brier": 0.13305303895818246,
+            "log_loss": 0.4369931582229794,
+            "market_brier": 0.13244942193233483,
+            "market_log_loss": 0.4350438648934782,
+            "model_minus_market_brier": 0.0006036170258476303,
+            "model_minus_market_log_loss": 0.0019492933295012227,
+            "rows": 109,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 2,
+        "years_model_beats_market_log_loss": 1,
+        "years_model_lags_market_brier": 3,
+        "years_model_lags_market_log_loss": 4
+      },
+      {
+        "accuracy": 0.5051546391752577,
+        "actual_rate": 0.5169366715758469,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.2527454788434212,
+        "log_loss": 0.6986971252640514,
+        "market_brier": 0.2523185459053881,
+        "market_log_loss": 0.6978267135085514,
+        "mean_prob": 0.4975723271457883,
+        "min_year_rows": 70,
+        "model_minus_market_brier": 0.00042693293803308663,
+        "model_minus_market_log_loss": 0.0008704117554999558,
+        "roc_auc": 0.49900979779028565,
+        "rows": 679,
+        "segment": "ability_strongly_supports_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_damage": 0.59100958198447,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.250070506572544,
+            "log_loss": 0.693267627409727,
+            "market_brier": 0.24914295876816575,
+            "market_log_loss": 0.6914095440711318,
+            "model_minus_market_brier": 0.0009275478043782315,
+            "model_minus_market_log_loss": 0.0018580833385952733,
+            "rows": 97,
+            "year": 2022
+          },
+          {
+            "brier": 0.25472512373168793,
+            "log_loss": 0.7027170480753074,
+            "market_brier": 0.25274217764762885,
+            "market_log_loss": 0.6986982172723019,
+            "model_minus_market_brier": 0.0019829460840590785,
+            "model_minus_market_log_loss": 0.00401883080300558,
+            "rows": 134,
+            "year": 2023
+          },
+          {
+            "brier": 0.25437151272759334,
+            "log_loss": 0.7019704698725648,
+            "market_brier": 0.2549712711332569,
+            "market_log_loss": 0.7031724231685768,
+            "model_minus_market_brier": -0.0005997584056635641,
+            "model_minus_market_log_loss": -0.001201953296011915,
+            "rows": 211,
+            "year": 2024
+          },
+          {
+            "brier": 0.24940550759573915,
+            "log_loss": 0.6919697467407268,
+            "market_brier": 0.24926547637022808,
+            "market_log_loss": 0.6916747300609757,
+            "model_minus_market_brier": 0.00014003122551106695,
+            "model_minus_market_log_loss": 0.00029501667975107004,
+            "rows": 167,
+            "year": 2025
+          },
+          {
+            "brier": 0.2557295066155629,
+            "log_loss": 0.7047083843520505,
+            "market_brier": 0.2551957300216982,
+            "market_log_loss": 0.7036141482023653,
+            "model_minus_market_brier": 0.0005337765938646655,
+            "model_minus_market_log_loss": 0.0010942361496851793,
+            "rows": 70,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 1,
+        "years_model_beats_market_log_loss": 1,
+        "years_model_lags_market_brier": 4,
+        "years_model_lags_market_log_loss": 4
+      },
+      {
+        "accuracy": 0.5467128027681661,
+        "actual_rate": 0.46366782006920415,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.24875791286254706,
+        "log_loss": 0.6906648089354706,
+        "market_brier": 0.2478586101259562,
+        "market_log_loss": 0.6888485502316288,
+        "mean_prob": 0.49507306283895663,
+        "min_year_rows": 32,
+        "model_minus_market_brier": 0.0008993027365908624,
+        "model_minus_market_log_loss": 0.0018162587038417222,
+        "roc_auc": 0.542079922965816,
+        "rows": 289,
+        "segment": "ability_mildly_supports_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_damage": 0.5248987654102577,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.25581256997931145,
+            "log_loss": 0.704907197222907,
+            "market_brier": 0.25399154125178436,
+            "market_log_loss": 0.7012240574132967,
+            "model_minus_market_brier": 0.0018210287275270964,
+            "model_minus_market_log_loss": 0.003683139809610214,
+            "rows": 40,
+            "year": 2022
+          },
+          {
+            "brier": 0.2621235574365182,
+            "log_loss": 0.7174575102858187,
+            "market_brier": 0.26124414938973284,
+            "market_log_loss": 0.7156875610966752,
+            "model_minus_market_brier": 0.0008794080467853793,
+            "model_minus_market_log_loss": 0.001769949189143527,
+            "rows": 52,
+            "year": 2023
+          },
+          {
+            "brier": 0.24076781364883054,
+            "log_loss": 0.6746085053253713,
+            "market_brier": 0.23950352637173505,
+            "market_log_loss": 0.6720523080699833,
+            "model_minus_market_brier": 0.0012642872770954883,
+            "model_minus_market_log_loss": 0.0025561972553880263,
+            "rows": 84,
+            "year": 2024
+          },
+          {
+            "brier": 0.24598236323180986,
+            "log_loss": 0.6851074474744916,
+            "market_brier": 0.24573971091680485,
+            "market_log_loss": 0.6846042109687942,
+            "model_minus_market_brier": 0.00024265231500500417,
+            "model_minus_market_log_loss": 0.0005032365056973909,
+            "rows": 81,
+            "year": 2025
+          },
+          {
+            "brier": 0.2462200394726983,
+            "log_loss": 0.6855385520564727,
+            "market_brier": 0.24573650339302888,
+            "market_log_loss": 0.6845993930322136,
+            "model_minus_market_brier": 0.0004835360796694166,
+            "model_minus_market_log_loss": 0.0009391590242591175,
+            "rows": 32,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 0,
+        "years_model_beats_market_log_loss": 0,
+        "years_model_lags_market_brier": 5,
+        "years_model_lags_market_log_loss": 5
+      },
+      {
+        "accuracy": 0.6114068441064638,
+        "actual_rate": 0.4897338403041825,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.23659063025361463,
+        "log_loss": 0.6660146605409724,
+        "market_brier": 0.23647729978192952,
+        "market_log_loss": 0.665776146094014,
+        "mean_prob": 0.5104404429636625,
+        "min_year_rows": 200,
+        "model_minus_market_brier": 0.00011333047168510246,
+        "model_minus_market_log_loss": 0.0002385144469583267,
+        "roc_auc": 0.6325198322703669,
+        "rows": 1315,
+        "segment": "ability_strongly_supports_favorite | modest_fav | model_near_baseline_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_damage": 0.3136464977501996,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.23586537473095742,
+            "log_loss": 0.6643748530090018,
+            "market_brier": 0.23485868316236905,
+            "market_log_loss": 0.6622221849678297,
+            "model_minus_market_brier": 0.0010066915685883748,
+            "model_minus_market_log_loss": 0.00215266804117209,
+            "rows": 201,
+            "year": 2022
+          },
+          {
+            "brier": 0.24401346524202722,
+            "log_loss": 0.6811717424793088,
+            "market_brier": 0.24499966640917273,
+            "market_log_loss": 0.683318572891951,
+            "model_minus_market_brier": -0.0009862011671455118,
+            "model_minus_market_log_loss": -0.0021468304126421867,
+            "rows": 239,
+            "year": 2023
+          },
+          {
+            "brier": 0.2390502147287304,
+            "log_loss": 0.6711426582465854,
+            "market_brier": 0.2387446580472425,
+            "market_log_loss": 0.670489256162777,
+            "model_minus_market_brier": 0.00030555668148790627,
+            "model_minus_market_log_loss": 0.0006534020838083743,
+            "rows": 336,
+            "year": 2024
+          },
+          {
+            "brier": 0.23222339033175188,
+            "log_loss": 0.6571296078004302,
+            "market_brier": 0.23194574154673567,
+            "market_log_loss": 0.6565381475775652,
+            "model_minus_market_brier": 0.00027764878501621015,
+            "model_minus_market_log_loss": 0.0005914602228649368,
+            "rows": 339,
+            "year": 2025
+          },
+          {
+            "brier": 0.23171959399209505,
+            "log_loss": 0.6559950824440796,
+            "market_brier": 0.23179161068796014,
+            "market_log_loss": 0.6561250595721532,
+            "model_minus_market_brier": -7.201669586509585e-05,
+            "model_minus_market_log_loss": -0.00012997712807361061,
+            "rows": 200,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 2,
+        "years_model_beats_market_log_loss": 2,
+        "years_model_lags_market_brier": 3,
+        "years_model_lags_market_log_loss": 3
+      },
+      {
+        "accuracy": 0.5348837209302325,
+        "actual_rate": 0.5441860465116279,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.24886012949306732,
+        "log_loss": 0.6908707867758558,
+        "market_brier": 0.24817477066508403,
+        "market_log_loss": 0.6894872562839022,
+        "mean_prob": 0.5006742463600101,
+        "min_year_rows": 20,
+        "model_minus_market_brier": 0.0006853588279832901,
+        "model_minus_market_log_loss": 0.0013835304919536107,
+        "roc_auc": 0.543171114599686,
+        "rows": 215,
+        "segment": "ability_split_or_neutral | near_pickem_fav | model_near_baseline_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_damage": 0.2974590557700263,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.25771933667401775,
+            "log_loss": 0.7086893652961811,
+            "market_brier": 0.2595172174368623,
+            "market_log_loss": 0.7122972723209329,
+            "model_minus_market_brier": -0.0017978807628445392,
+            "model_minus_market_log_loss": -0.0036079070247517775,
+            "rows": 34,
+            "year": 2022
+          },
+          {
+            "brier": 0.2553188217034701,
+            "log_loss": 0.703885006566504,
+            "market_brier": 0.2517824397165396,
+            "market_log_loss": 0.6967670254111189,
+            "model_minus_market_brier": 0.0035363819869305146,
+            "model_minus_market_log_loss": 0.007117981155385089,
+            "rows": 38,
+            "year": 2023
+          },
+          {
+            "brier": 0.24710005248606745,
+            "log_loss": 0.6873018893523144,
+            "market_brier": 0.2464019767228164,
+            "market_log_loss": 0.6859010831238022,
+            "model_minus_market_brier": 0.0006980757632510382,
+            "model_minus_market_log_loss": 0.0014008062285122413,
+            "rows": 64,
+            "year": 2024
+          },
+          {
+            "brier": 0.24425643485525508,
+            "log_loss": 0.6816391860241319,
+            "market_brier": 0.243636534111711,
+            "market_log_loss": 0.680370485331705,
+            "model_minus_market_brier": 0.000619900743544094,
+            "model_minus_market_log_loss": 0.001268700692426905,
+            "rows": 59,
+            "year": 2025
+          },
+          {
+            "brier": 0.2407411076896318,
+            "log_loss": 0.6745058796619886,
+            "market_brier": 0.24109877840300203,
+            "market_log_loss": 0.6752488961005404,
+            "model_minus_market_brier": -0.0003576707133702284,
+            "model_minus_market_log_loss": -0.0007430164385517912,
+            "rows": 20,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 2,
+        "years_model_beats_market_log_loss": 2,
+        "years_model_lags_market_brier": 3,
+        "years_model_lags_market_log_loss": 3
+      },
+      {
+        "accuracy": 0.5470085470085471,
+        "actual_rate": 0.46153846153846156,
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+        "brier": 0.2472223326569833,
+        "log_loss": 0.6875464655789535,
+        "market_brier": 0.24684214932682125,
+        "market_log_loss": 0.6867816510640135,
+        "mean_prob": 0.4942735499607174,
+        "min_year_rows": 29,
+        "model_minus_market_brier": 0.00038018333016204275,
+        "model_minus_market_log_loss": 0.0007648145149400376,
+        "roc_auc": 0.5575396825396826,
+        "rows": 234,
+        "segment": "ability_mildly_opposes_favorite | near_pickem_fav | model_near_baseline_on_favorite",
+        "segment_col": "ability_consensus_pressure_segment",
+        "weighted_log_loss_damage": 0.1789665964959688,
+        "year_count": 5,
+        "yearly_model_minus_market": [
+          {
+            "brier": 0.255914264010941,
+            "log_loss": 0.7050348615563176,
+            "market_brier": 0.25487481840864823,
+            "market_log_loss": 0.7029621164240226,
+            "model_minus_market_brier": 0.0010394456022927434,
+            "model_minus_market_log_loss": 0.0020727451322949397,
+            "rows": 29,
+            "year": 2022
+          },
+          {
+            "brier": 0.24028042967967794,
+            "log_loss": 0.6735577925277904,
+            "market_brier": 0.24001967158865434,
+            "market_log_loss": 0.6730374934394426,
+            "model_minus_market_brier": 0.00026075809102360514,
+            "model_minus_market_log_loss": 0.0005202990883477199,
+            "rows": 41,
+            "year": 2023
+          },
+          {
+            "brier": 0.24863021116178907,
+            "log_loss": 0.6903854620057558,
+            "market_brier": 0.24808334699360218,
+            "market_log_loss": 0.6892821353733386,
+            "model_minus_market_brier": 0.0005468641681868891,
+            "model_minus_market_log_loss": 0.0011033266324171898,
+            "rows": 65,
+            "year": 2024
+          },
+          {
+            "brier": 0.24109210702959719,
+            "log_loss": 0.6752116788061215,
+            "market_brier": 0.2409650421863396,
+            "market_log_loss": 0.674961061104996,
+            "model_minus_market_brier": 0.00012706484325758494,
+            "model_minus_market_log_loss": 0.00025061770112555504,
+            "rows": 68,
+            "year": 2025
+          },
+          {
+            "brier": 0.2587673408071325,
+            "log_loss": 0.7107917186294239,
+            "market_brier": 0.25864020162049395,
+            "market_log_loss": 0.7105089286212445,
+            "model_minus_market_brier": 0.0001271391866385363,
+            "model_minus_market_log_loss": 0.00028279000817943434,
+            "rows": 31,
+            "year": 2026
+          }
+        ],
+        "years": [
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ],
+        "years_model_beats_market_brier": 0,
+        "years_model_beats_market_log_loss": 0,
+        "years_model_lags_market_brier": 5,
+        "years_model_lags_market_log_loss": 5
       }
     ],
     "where_residual_overlay_filtered_p1_ability_pressure_stably_lags_market_bin_recalibrated_p1_elo_diff_pressure_segment": [

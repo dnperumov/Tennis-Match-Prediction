@@ -169,6 +169,50 @@ def stable_segment_summary(
     return sorted(rows, key=lambda r: r[sort_key], reverse=True)[:top_n]
 
 
+def add_ability_consensus_segments(df: pd.DataFrame, signal_cols: Iterable[str]) -> pd.DataFrame:
+    """Add multi-signal favorite-side ability consensus buckets.
+
+    Each supplied signal is expected in favorite perspective as ``favorite_<signal>``.
+    Positive values above the neutral cut support the market favorite; negative values
+    below the neutral cut oppose it. Missing/neutral signals do not vote. The combined
+    segment is reporting-only evidence for routing/shrinkage hypotheses.
+    """
+    out = df.copy()
+    support = pd.Series(0, index=out.index, dtype=int)
+    oppose = pd.Series(0, index=out.index, dtype=int)
+    for col in signal_cols:
+        fav_col = f"favorite_{col}"
+        spec = SIGNAL_SPECS.get(col)
+        if fav_col not in out.columns or not spec:
+            continue
+        cuts = spec["cuts"]
+        # The middle two cuts define the neutral zone for all current signal specs.
+        low_neutral = float(cuts[1])
+        high_neutral = float(cuts[2])
+        values = pd.to_numeric(out[fav_col], errors="coerce")
+        support += (values > high_neutral).fillna(False).astype(int)
+        oppose += (values < low_neutral).fillna(False).astype(int)
+    out["favorite_ability_support_count"] = support
+    out["favorite_ability_oppose_count"] = oppose
+    net = support - oppose
+    out["favorite_ability_consensus_bucket"] = np.select(
+        [net >= 3, net >= 1, net <= -3, net <= -1],
+        [
+            "ability_strongly_supports_favorite",
+            "ability_mildly_supports_favorite",
+            "ability_strongly_opposes_favorite",
+            "ability_mildly_opposes_favorite",
+        ],
+        default="ability_split_or_neutral",
+    )
+    if "favorite_strength_bucket" not in out.columns:
+        out["favorite_strength_bucket"] = bucket_numeric_signal(out["baseline_favorite_prob"], FAVORITE_STRENGTH_CUTS, FAVORITE_STRENGTH_LABELS)
+    if "model_favorite_pressure_bucket" not in out.columns:
+        out["model_favorite_pressure_bucket"] = bucket_numeric_signal(out["model_minus_baseline_favorite_prob"], PRESSURE_CUTS, PRESSURE_LABELS)
+    out["ability_consensus_pressure_segment"] = out["favorite_ability_consensus_bucket"].astype(str) + " | " + out["favorite_strength_bucket"].astype(str) + " | " + out["model_favorite_pressure_bucket"].astype(str)
+    return out
+
+
 def add_diagnostic_buckets(df: pd.DataFrame, signal_cols: Iterable[str]) -> pd.DataFrame:
     out = df.copy()
     out["favorite_strength_bucket"] = bucket_numeric_signal(out["baseline_favorite_prob"], FAVORITE_STRENGTH_CUTS, FAVORITE_STRENGTH_LABELS)
@@ -180,6 +224,7 @@ def add_diagnostic_buckets(df: pd.DataFrame, signal_cols: Iterable[str]) -> pd.D
             out[f"favorite_{col}_bucket"] = bucket_numeric_signal(out[fav_col], spec["cuts"], spec["labels"])
             out[f"{col}_pressure_segment"] = out[f"favorite_{col}_bucket"] + " | " + out["model_favorite_pressure_bucket"]
             out[f"{col}_strength_pressure_segment"] = out[f"favorite_{col}_bucket"] + " | " + out["favorite_strength_bucket"] + " | " + out["model_favorite_pressure_bucket"]
+    out = add_ability_consensus_segments(out, signal_cols)
     return out
 
 
@@ -401,6 +446,23 @@ def build_report(
                     min_train_rows=min_rows,
                     min_train_years=min_years,
                 )
+    if "ability_consensus_pressure_segment" in work.columns:
+        consensus_segment_col = "ability_consensus_pressure_segment"
+        report["sections"][f"where_{model_col}_ability_pressure_stably_lags_{baseline_col}_{consensus_segment_col}"] = stable_segment_summary(
+            work, consensus_segment_col, model_col, baseline_col, min_rows=min_rows, min_years=min_years, direction="lags", top_n=top_n
+        )
+        report["sections"][f"where_{model_col}_ability_pressure_beats_{baseline_col}_{consensus_segment_col}"] = stable_segment_summary(
+            work, consensus_segment_col, model_col, baseline_col, min_rows=min_rows, min_years=min_years, direction="beats", top_n=top_n
+        )
+        strength_segment_cols.append(consensus_segment_col)
+        report["routing_diagnostics"][f"{model_col}_fallback_to_{baseline_col}_{consensus_segment_col}"] = no_lookahead_segment_fallback_routing(
+            work,
+            segment_col=consensus_segment_col,
+            model_col=model_col,
+            baseline_col=baseline_col,
+            min_train_rows=min_rows,
+            min_train_years=min_years,
+        )
     if strength_segment_cols:
         report["routing_diagnostics"][f"{model_col}_fallback_to_{baseline_col}_all_ability_strength_pressure_segments"] = no_lookahead_multi_segment_fallback_routing(
             work,
