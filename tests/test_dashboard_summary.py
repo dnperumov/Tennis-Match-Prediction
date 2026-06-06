@@ -48,6 +48,8 @@ def test_dashboard_summary_names_current_best_and_recommends_pause_when_no_model
         "advanced_test_years": [2022, 2023, 2024, 2025, 2026],
         "ability_years": None,
         "baseline_probability_col": None,
+        "aligned": True,
+        "status": "aligned",
         "warnings": [],
     }
     assert summary["automation_recommendation"]["decision"] == "pause_or_change_scope"
@@ -72,6 +74,8 @@ def test_dashboard_summary_warns_when_artifact_scopes_do_not_align():
 
     assert summary["artifact_alignment"]["advanced_rows"] == 500
     assert summary["artifact_alignment"]["ability_rows"] == 11801
+    assert summary["artifact_alignment"]["aligned"] is False
+    assert summary["artifact_alignment"]["status"] == "scope_mismatch"
     assert "Advanced and ability artifacts cover different row counts." in summary["artifact_alignment"]["warnings"]
     assert "Advanced test years and ability years differ." in summary["artifact_alignment"]["warnings"]
     assert summary["automation_recommendation"]["decision"] == "pause_or_change_scope"

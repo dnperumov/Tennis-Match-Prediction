@@ -136,6 +136,8 @@ def _artifact_alignment(best: dict[str, Any], advanced_report: dict[str, Any], a
         "advanced_test_years": advanced_years,
         "ability_years": ability_years,
         "baseline_probability_col": baseline_col,
+        "aligned": not warnings,
+        "status": "aligned" if not warnings else "scope_mismatch",
         "warnings": warnings,
     }
 

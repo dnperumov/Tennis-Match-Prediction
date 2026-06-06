@@ -153,6 +153,16 @@ with tab_summary:
         )
 
         gaps = decision_summary.get("top_calibration_gaps", [])
+        alignment = decision_summary.get("artifact_alignment", {})
+        if alignment.get("warnings"):
+            st.subheader("Artifact alignment warnings")
+            for warning in alignment.get("warnings", []):
+                st.warning(warning)
+            with st.expander("Artifact alignment details"):
+                st.json(alignment)
+        elif alignment:
+            st.caption("Artifact alignment: advanced model and ability/routing diagnostics cover the same rows, years, and calibrated-market baseline.")
+
         if gaps:
             st.subheader("Largest material calibration gaps for current best")
             st.dataframe(pd.DataFrame(gaps), use_container_width=True)
