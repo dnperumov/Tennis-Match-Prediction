@@ -115,6 +115,29 @@ def _material_calibration_gaps(row: dict[str, Any] | None, limit: int = 3) -> li
     return sorted(material, key=lambda item: item["weighted_abs_error"] or 0, reverse=True)[:limit]
 
 
+def _artifact_alignment(best: dict[str, Any], advanced_report: dict[str, Any], ability_report: dict[str, Any]) -> dict[str, Any]:
+    advanced_rows = best.get("rows")
+    ability_rows = ability_report.get("rows")
+    advanced_years = advanced_report.get("test_years")
+    ability_years = ability_report.get("years")
+    warnings = []
+    if advanced_rows is not None and ability_rows is not None and int(advanced_rows) != int(ability_rows):
+        warnings.append("Advanced and ability artifacts cover different row counts.")
+    if advanced_years is not None and ability_years is not None and list(advanced_years) != list(ability_years):
+        warnings.append("Advanced test years and ability years differ.")
+    baseline_col = ability_report.get("baseline_probability_col")
+    if baseline_col is not None and baseline_col != "market_bin_recalibrated_p1":
+        warnings.append("Ability diagnostics are not benchmarked against market_bin_recalibrated_p1.")
+    return {
+        "advanced_rows": advanced_rows,
+        "ability_rows": ability_rows,
+        "advanced_test_years": advanced_years,
+        "ability_years": ability_years,
+        "baseline_probability_col": baseline_col,
+        "warnings": warnings,
+    }
+
+
 def build_dashboard_summary(
     advanced_report: dict[str, Any], ability_report: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -176,6 +199,7 @@ def build_dashboard_summary(
         "market_no_vig": _compact_model(raw_market),
         "residual_overlay_filtered": residual_summary,
         "ability_routing": ability_summary,
+        "artifact_alignment": _artifact_alignment(best, advanced_report, ability_report),
         "top_calibration_gaps": _material_calibration_gaps(best),
         "stable_failure_counts": {
             "filtered_overlay_lags_calibrated_market": len(

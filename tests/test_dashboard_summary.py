@@ -41,8 +41,39 @@ def test_dashboard_summary_names_current_best_and_recommends_pause_when_no_model
     assert summary["current_best"]["beats_market_no_vig_by_log_loss"] == 0.0002
     assert summary["residual_overlay_filtered"]["log_loss_delta_vs_best"] == 0.001
     assert summary["ability_routing"]["best_routed_minus_baseline_log_loss"] == 0.0008
+    assert summary["artifact_alignment"] == {
+        "advanced_rows": 11801,
+        "ability_rows": None,
+        "advanced_test_years": [2022, 2023, 2024, 2025, 2026],
+        "ability_years": None,
+        "baseline_probability_col": None,
+        "warnings": [],
+    }
     assert summary["automation_recommendation"]["decision"] == "pause_or_change_scope"
     assert "non-placeholder data source" in summary["automation_recommendation"]["reason"]
+
+
+def test_dashboard_summary_warns_when_artifact_scopes_do_not_align():
+    advanced_report = {
+        "test_years": [2022, 2023],
+        "overall_model_comparison": [
+            {"model": "market_bin_recalibrated", "rows": 500, "accuracy": 0.65, "log_loss": 0.59, "brier": 0.20},
+            {"model": "market_no_vig", "rows": 500, "accuracy": 0.64, "log_loss": 0.591, "brier": 0.201},
+        ],
+    }
+    ability_report = {
+        "rows": 11801,
+        "years": [2022, 2023, 2024, 2025, 2026],
+        "baseline_probability_col": "market_bin_recalibrated_p1",
+    }
+
+    summary = build_dashboard_summary(advanced_report, ability_report)
+
+    assert summary["artifact_alignment"]["advanced_rows"] == 500
+    assert summary["artifact_alignment"]["ability_rows"] == 11801
+    assert "Advanced and ability artifacts cover different row counts." in summary["artifact_alignment"]["warnings"]
+    assert "Advanced test years and ability years differ." in summary["artifact_alignment"]["warnings"]
+    assert summary["automation_recommendation"]["decision"] == "pause_or_change_scope"
 
 
 def test_dashboard_summary_allows_continue_when_policy_beats_calibrated_market():
