@@ -1,10 +1,11 @@
 from pathlib import Path
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from tennis_ml.dashboard_summary import build_dashboard_summary  # noqa: E402
+from tennis_ml.dashboard_summary import build_dashboard_summary, write_dashboard_summary_file  # noqa: E402
 
 
 def test_dashboard_summary_names_current_best_and_recommends_pause_when_no_model_beats_it():
@@ -89,3 +90,60 @@ def test_dashboard_summary_allows_continue_when_policy_beats_calibrated_market()
     assert summary["current_best"]["model"] == "new_policy"
     assert summary["automation_recommendation"]["decision"] == "continue"
     assert summary["automation_recommendation"]["reason"] == "A model/policy currently beats calibrated market on both log_loss and Brier."
+
+
+def test_write_dashboard_summary_file_creates_decision_artifact(tmp_path):
+    advanced_path = tmp_path / "advanced.json"
+    ability_path = tmp_path / "ability.json"
+    output_path = tmp_path / "latest_dashboard_decision_summary.json"
+    advanced_path.write_text(
+        '{"generated_at":"2026-06-06T00:00:00+00:00","test_years":[2026],'
+        '"overall_model_comparison":[{"model":"market_bin_recalibrated","rows":10,'
+        '"accuracy":0.7,"log_loss":0.58,"brier":0.20},{"model":"market_no_vig",'
+        '"rows":10,"accuracy":0.7,"log_loss":0.59,"brier":0.21}]}',
+        encoding="utf-8",
+    )
+    ability_path.write_text(
+        '{"rows":10,"years":[2026],"baseline_probability_col":"market_bin_recalibrated_p1",'
+        '"routing_diagnostics":{}}',
+        encoding="utf-8",
+    )
+
+    summary = write_dashboard_summary_file(advanced_path, ability_path, output_path)
+
+    assert output_path.exists()
+    assert summary["current_best"]["model"] == "market_bin_recalibrated"
+    assert '"research_only_guardrail": "No betting execution; model-quality diagnostics and paper tracking only."' in output_path.read_text(encoding="utf-8")
+
+
+def test_generate_dashboard_decision_summary_cli_writes_output(tmp_path):
+    advanced_path = tmp_path / "advanced.json"
+    ability_path = tmp_path / "ability.json"
+    output_path = tmp_path / "decision.json"
+    advanced_path.write_text(
+        '{"generated_at":"2026-06-06T00:00:00+00:00","overall_model_comparison":['
+        '{"model":"market_bin_recalibrated","rows":5,"accuracy":0.6,"log_loss":0.6,"brier":0.22}]}',
+        encoding="utf-8",
+    )
+    ability_path.write_text('{"rows":5,"years":[],"routing_diagnostics":{}}', encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "generate_dashboard_decision_summary.py"),
+            "--advanced",
+            str(advanced_path),
+            "--ability",
+            str(ability_path),
+            "--output",
+            str(output_path),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "pause_or_change_scope" in result.stdout
+    assert output_path.exists()

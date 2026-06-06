@@ -7,6 +7,8 @@ risk-control the calibrated-market baseline.
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 
@@ -212,3 +214,20 @@ def build_dashboard_summary(
         "automation_recommendation": {"decision": decision, "reason": reason},
         "research_only_guardrail": "No betting execution; model-quality diagnostics and paper tracking only.",
     }
+
+
+def write_dashboard_summary_file(
+    advanced_path: str | Path,
+    ability_path: str | Path | None,
+    output_path: str | Path,
+) -> dict[str, Any]:
+    """Read current artifacts, write the dashboard decision summary JSON, and return it."""
+    advanced_payload = json.loads(Path(advanced_path).read_text(encoding="utf-8"))
+    ability_payload: dict[str, Any] = {}
+    if ability_path is not None and Path(ability_path).exists():
+        ability_payload = json.loads(Path(ability_path).read_text(encoding="utf-8"))
+    summary = build_dashboard_summary(advanced_payload, ability_payload)
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return summary
