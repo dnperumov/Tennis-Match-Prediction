@@ -22,6 +22,8 @@ from tennis_ml.features.columns import FEATURE_COLUMNS
 from tennis_ml.live_stats.database import DEFAULT_DB_PATH, insert_model_run, insert_prediction, latest_model_run
 from tennis_ml.models import ModelTrainer
 
+from .model_artifacts import ensure_latest_model_artifact, latest_model_dir
+
 
 TOURNEY_IMPORTANCE = {'G': 5, 'M': 4, 'A': 3, 'C': 2, 'F': 1, 'D': 1}
 SURFACE_ENCODING = {'Clay': 0, 'Grass': 1, 'Hard': 2, 'Carpet': 3, 'Unknown': 3}
@@ -323,12 +325,19 @@ class TennisPredictionService:
     def _latest_model_dir(self) -> Path:
         run = latest_model_run(self.db_path)
         if run and run.get('artifact_dir'):
-            return Path(run['artifact_dir'])
-        daily_root = Path('models/daily')
-        candidates = sorted([path for path in daily_root.glob('*') if path.is_dir()])
-        if not candidates:
-            raise FileNotFoundError('No daily model found. Run daily_update.py --retrain first.')
-        return candidates[-1]
+            path = Path(run['artifact_dir'])
+            if (path / 'daily_ensemble_model.pkl').exists():
+                return path
+        local = latest_model_dir('models/daily')
+        if local is not None:
+            return local
+        try:
+            return ensure_latest_model_artifact('models/daily')
+        except Exception as exc:
+            raise FileNotFoundError(
+                'No daily model found locally, and the latest release artifact could not be downloaded. '
+                'Run the GitHub Actions daily model workflow or use Model Setup in the sidebar.'
+            ) from exc
 
     @staticmethod
     def _load_bundle(model_dir: Path) -> dict[str, Any]:

@@ -1,4 +1,5 @@
 import tempfile
+import tarfile
 import unittest
 from pathlib import Path
 
@@ -6,6 +7,7 @@ import pandas as pd
 
 from tennis_ml.daily import MatchPredictionRequest, scrape_daily_matches
 from tennis_ml.daily.prediction import fair_odds
+from tennis_ml.daily.model_artifacts import ensure_latest_model_artifact, latest_model_dir
 from tennis_ml.live_stats.database import (
     init_live_db,
     read_table,
@@ -77,6 +79,22 @@ class DailyPipelineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             request.validate()
         self.assertAlmostEqual(fair_odds(0.4), 2.5)
+
+    def test_model_artifact_download_and_discovery(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            source_model = temp_path / '2026-06-08'
+            source_model.mkdir()
+            (source_model / 'daily_ensemble_model.pkl').write_text('placeholder')
+            archive = temp_path / 'model.tar.gz'
+            with tarfile.open(archive, 'w:gz') as handle:
+                handle.add(source_model, arcname=source_model.name)
+
+            model_root = temp_path / 'models'
+            found = ensure_latest_model_artifact(model_root, artifact_url=archive.as_uri())
+
+            self.assertEqual(found.name, '2026-06-08')
+            self.assertEqual(latest_model_dir(model_root).name, '2026-06-08')
 
 
 if __name__ == '__main__':

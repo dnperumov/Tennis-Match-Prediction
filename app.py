@@ -11,7 +11,13 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-from tennis_ml.daily import MatchPredictionRequest, TennisPredictionService
+from tennis_ml.daily import (
+    MatchPredictionRequest,
+    TennisPredictionService,
+    ensure_latest_model_artifact,
+    latest_model_dir,
+    train_daily_model,
+)
 from tennis_ml.live_stats.database import DEFAULT_DB_PATH, latest_model_run, read_table
 
 
@@ -22,11 +28,40 @@ db_path = st.sidebar.text_input('SQLite DB', str(DEFAULT_DB_PATH))
 model_dir = st.sidebar.text_input('Model directory override', '')
 
 latest_run = latest_model_run(db_path)
+local_model_dir = latest_model_dir()
 if latest_run:
     st.sidebar.success(f"Latest model: {latest_run['model_run_id']}")
     st.sidebar.caption(latest_run.get('artifact_dir', ''))
+elif local_model_dir:
+    st.sidebar.success(f"Latest model artifact: {local_model_dir.name}")
+    st.sidebar.caption(str(local_model_dir))
 else:
     st.sidebar.warning('No daily model run found yet.')
+    st.sidebar.caption('Cloud deploys download the latest GitHub Release model artifact, or can train a fallback model here.')
+
+with st.sidebar.expander('Model Setup', expanded=latest_run is None):
+    st.caption('Preferred: download the latest model built by GitHub Actions. Fallback: train inside this deployment.')
+    if st.button('Download Latest Release Model'):
+        with st.spinner('Downloading latest model artifact...'):
+            try:
+                path = ensure_latest_model_artifact()
+                st.success(f'Model downloaded: {path.name}')
+                st.rerun()
+            except Exception as exc:
+                st.error(str(exc))
+    start_year = st.number_input('Training start year', min_value=2000, max_value=2026, value=2019, step=1)
+    if st.button('Initialize / Retrain Model'):
+        with st.spinner('Training daily model. This can take a few minutes on Streamlit Cloud...'):
+            try:
+                run = train_daily_model(
+                    as_of_date=pd.Timestamp.utcnow().date(),
+                    db_path=db_path,
+                    start_year=int(start_year),
+                )
+                st.success(f"Model ready: {run['model_run_id']}")
+                st.rerun()
+            except Exception as exc:
+                st.error(str(exc))
 
 tab_predict, tab_markets, tab_history = st.tabs(['Predict Match', 'Kalshi Markets', 'Run History'])
 
@@ -67,6 +102,8 @@ with tab_predict:
             metrics[2].metric('Fair odds P1', f"{result['fair_odds_player1']:.2f}")
             metrics[3].metric('Decision', result['strategy_decision'].upper())
             st.json(result)
+        except FileNotFoundError:
+            st.error('No model is available yet. Open Model Setup in the sidebar and click Initialize / Retrain Model.')
         except Exception as exc:
             st.error(str(exc))
 

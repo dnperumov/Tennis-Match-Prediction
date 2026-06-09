@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument('--source', help='Optional Tennis Abstract CSV/HTML file or URL.')
     parser.add_argument('--table-index', type=int)
     parser.add_argument('--retrain', action='store_true')
+    parser.add_argument('--training-start-year', type=int, default=2000)
     parser.add_argument('--refresh-dashboard', action='store_true')
     parser.add_argument('--no-kalshi', action='store_true', help='Skip Kalshi market snapshot.')
     args = parser.parse_args()
@@ -30,6 +31,7 @@ def main() -> None:
         source=args.source,
         table_index=args.table_index,
         retrain=args.retrain,
+        training_start_year=args.training_start_year,
         fetch_kalshi=not args.no_kalshi,
         refresh_dashboard=args.refresh_dashboard,
     )

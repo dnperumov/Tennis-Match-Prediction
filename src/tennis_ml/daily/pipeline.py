@@ -45,6 +45,7 @@ def run_daily_update(
     source: str | None = None,
     table_index: int | None = None,
     retrain: bool = False,
+    training_start_year: int = 2000,
     fetch_kalshi: bool = True,
     refresh_dashboard: bool = False,
 ) -> dict[str, Any]:
@@ -60,7 +61,11 @@ def run_daily_update(
 
     model_run = None
     if retrain:
-        model_run = train_daily_model(as_of_date=match_date, db_path=db_path)
+        model_run = train_daily_model(
+            as_of_date=match_date,
+            db_path=db_path,
+            start_year=training_start_year,
+        )
 
     dashboard_path = None
     if refresh_dashboard:
