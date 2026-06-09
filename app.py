@@ -11,13 +11,8 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-from tennis_ml.daily import (
-    MatchPredictionRequest,
-    TennisPredictionService,
-    ensure_latest_model_artifact,
-    latest_model_dir,
-    train_daily_model,
-)
+from tennis_ml.daily import MatchPredictionRequest, TennisPredictionService, train_daily_model
+from tennis_ml.daily.model_artifacts import ensure_latest_model_artifact, latest_model_dir
 from tennis_ml.live_stats.database import DEFAULT_DB_PATH, latest_model_run, read_table
 
 
