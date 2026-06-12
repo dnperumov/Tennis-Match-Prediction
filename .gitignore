@@ -56,6 +56,9 @@ Thumbs.db
 
 # Generated analysis artifacts and local databases
 walk_forward_results*/
+# Keep the production walk-forward evidence for the Streamlit Research page
+!walk_forward_results_stacked_avg/
+!walk_forward_results_stacked_avg/**
 .cache/
 data/tennis_matches.sqlite
 data/betting_research/
