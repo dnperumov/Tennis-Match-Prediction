@@ -48,7 +48,8 @@ class DataLoader:
             else:
                 print(f"Warning: File not found for {year}: {file_path}")
                 continue
-            
+
+            df = self._append_supplement(df, year)
             dfs.append(df)
         
         if not dfs:
@@ -60,7 +61,35 @@ class DataLoader:
         atp_matches = atp_matches.sort_values(by=sort_column).reset_index(drop=True)
         
         return atp_matches
-    
+
+    def _append_supplement(self, df: pd.DataFrame, year: int) -> pd.DataFrame:
+        """Append agent-scraped supplement rows for a year, if present.
+
+        Supplement files (atp_matches_{year}_supplement.csv, produced by
+        scripts/refresh_match_data.py) gap-fill matches not yet covered by
+        the Sackmann yearly file. Exact duplicate (winner_name, loser_name,
+        tourney_date) pairs are dropped, keeping the main-file row.
+        """
+        supplement_path = os.path.join(self.data_dir, f'atp_matches_{year}_supplement.csv')
+        if not os.path.exists(supplement_path):
+            return df
+
+        try:
+            supplement = pd.read_csv(supplement_path)
+        except Exception as e:
+            print(f"Warning: Could not read supplement for {year}: {e}")
+            return df
+
+        if supplement.empty:
+            return df
+
+        combined = pd.concat([df, supplement], ignore_index=True)
+        combined['tourney_date'] = pd.to_numeric(combined['tourney_date'], errors='coerce')
+        combined = combined.drop_duplicates(
+            subset=['winner_name', 'loser_name', 'tourney_date'], keep='first'
+        ).reset_index(drop=True)
+        return combined
+
     def split_data_chronologically(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
         Split data chronologically for temporal validation.

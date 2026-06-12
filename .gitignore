@@ -53,3 +53,11 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Generated analysis artifacts and local databases
+walk_forward_results*/
+.cache/
+data/tennis_matches.sqlite
+data/betting_research/
+data/exports/
+data/reports/

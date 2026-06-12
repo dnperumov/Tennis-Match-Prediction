@@ -39,11 +39,22 @@ jobs:
           RUN_DATE="$(python -c "from datetime import datetime; from zoneinfo import ZoneInfo; print(datetime.now(ZoneInfo('America/New_York')).date().isoformat())")"
           echo "date=${RUN_DATE}" >> "$GITHUB_OUTPUT"
 
-      - name: Refresh current-year ATP match data
+      - name: Fetch Hermes match database (optional)
+        continue-on-error: true
+        env:
+          HERMES_DB_URL: ${{ secrets.HERMES_DB_URL }}
         run: |
-          YEAR="$(date -u +%Y)"
-          curl -fsSL "https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_${YEAR}.csv" \
-            -o "tennis_datav2/atp_matches_${YEAR}.csv" || true
+          if [ -n "$HERMES_DB_URL" ]; then
+            mkdir -p data
+            curl -fsSL "$HERMES_DB_URL" -o data/tennis_matches.sqlite
+            echo "Downloaded Hermes DB to data/tennis_matches.sqlite"
+          else
+            echo "HERMES_DB_URL not set; skipping Hermes DB download"
+          fi
+
+      - name: Refresh ATP match data (Sackmann + agent supplement)
+        continue-on-error: true
+        run: python scripts/refresh_match_data.py
 
       - name: Train daily model
         env:
