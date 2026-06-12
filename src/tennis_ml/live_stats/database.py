@@ -114,7 +114,35 @@ CREATE TABLE IF NOT EXISTS model_runs (
     metrics_json TEXT,
     notes TEXT
 );
+
+CREATE TABLE IF NOT EXISTS picks (
+    pick_id TEXT PRIMARY KEY,
+    generated_at TEXT,
+    match_date TEXT,
+    tournament TEXT,
+    player TEXT,
+    opponent TEXT,
+    side TEXT,
+    fair_prob REAL,
+    confidence_tier TEXT,
+    kalshi_ticker TEXT,
+    kalshi_price REAL,
+    net_ev REAL,
+    stake_suggested REAL,
+    strategy_version TEXT,
+    reasons TEXT,
+    prediction_id TEXT,
+    status TEXT DEFAULT 'open',
+    settled_at TEXT
+);
 """
+
+PICK_COLUMNS = [
+    'pick_id', 'generated_at', 'match_date', 'tournament', 'player', 'opponent',
+    'side', 'fair_prob', 'confidence_tier', 'kalshi_ticker', 'kalshi_price',
+    'net_ev', 'stake_suggested', 'strategy_version', 'reasons', 'prediction_id',
+    'status', 'settled_at',
+]
 
 
 def connect(db_path: str | Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
@@ -327,6 +355,86 @@ def insert_model_run(run: dict[str, Any], db_path: str | Path = DEFAULT_DB_PATH)
                 json.dumps(run.get('metrics', {}), sort_keys=True),
                 run.get('notes'),
             ),
+        )
+
+
+def upsert_pick(pick: dict[str, Any], db_path: str | Path = DEFAULT_DB_PATH) -> None:
+    """Insert or update a strategy pick keyed by pick_id."""
+    init_live_db(db_path)
+    with connect(db_path) as connection:
+        connection.execute(
+            f"""
+            INSERT INTO picks ({', '.join(PICK_COLUMNS)})
+            VALUES ({', '.join('?' for _ in PICK_COLUMNS)})
+            ON CONFLICT(pick_id) DO UPDATE SET
+                generated_at=excluded.generated_at,
+                fair_prob=excluded.fair_prob,
+                confidence_tier=excluded.confidence_tier,
+                kalshi_ticker=excluded.kalshi_ticker,
+                kalshi_price=excluded.kalshi_price,
+                net_ev=excluded.net_ev,
+                stake_suggested=excluded.stake_suggested,
+                strategy_version=excluded.strategy_version,
+                reasons=excluded.reasons,
+                prediction_id=excluded.prediction_id
+            """,
+            tuple(pick.get(column, 'open' if column == 'status' else None) for column in PICK_COLUMNS),
+        )
+
+
+def fetch_picks(
+    status: str | None = None,
+    db_path: str | Path = DEFAULT_DB_PATH,
+    limit: int | None = None,
+) -> pd.DataFrame:
+    """Fetch picks, optionally filtered by status ('open'/'won'/'lost'/'void')."""
+    init_live_db(db_path)
+    query = 'SELECT * FROM picks'
+    params: list[Any] = []
+    if status is not None:
+        query += ' WHERE status = ?'
+        params.append(status)
+    query += ' ORDER BY generated_at DESC'
+    if limit is not None:
+        query += f' LIMIT {int(limit)}'
+    with connect(db_path) as connection:
+        return pd.read_sql_query(query, connection, params=params or None)
+
+
+def update_pick_status(
+    pick_id: str,
+    status: str,
+    settled_at: str | None = None,
+    db_path: str | Path = DEFAULT_DB_PATH,
+) -> None:
+    init_live_db(db_path)
+    with connect(db_path) as connection:
+        connection.execute(
+            'UPDATE picks SET status = ?, settled_at = ? WHERE pick_id = ?',
+            (status, settled_at, pick_id),
+        )
+
+
+def insert_paper_trade(trade: dict[str, Any], db_path: str | Path = DEFAULT_DB_PATH) -> None:
+    init_live_db(db_path)
+    columns = [
+        'paper_trade_id', 'prediction_id', 'created_at', 'settled_at', 'player',
+        'opponent', 'odds', 'stake', 'won', 'profit', 'friction_adjusted_profit',
+        'clv', 'status',
+    ]
+    with connect(db_path) as connection:
+        connection.execute(
+            f"""
+            INSERT INTO paper_trades ({', '.join(columns)})
+            VALUES ({', '.join('?' for _ in columns)})
+            ON CONFLICT(paper_trade_id) DO UPDATE SET
+                settled_at=excluded.settled_at,
+                won=excluded.won,
+                profit=excluded.profit,
+                friction_adjusted_profit=excluded.friction_adjusted_profit,
+                status=excluded.status
+            """,
+            tuple(trade.get(column) for column in columns),
         )
 
 
