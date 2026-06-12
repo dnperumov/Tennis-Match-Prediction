@@ -394,14 +394,21 @@ class TennisPredictionService:
         return 'low'
 
     def _latest_model_dir(self) -> Path:
+        candidates: list[Path] = []
         run = latest_model_run(self.db_path)
         if run and run.get('artifact_dir'):
             path = Path(run['artifact_dir'])
             if StackedModel.exists(path) or (path / 'daily_ensemble_model.pkl').exists():
-                return path
+                candidates.append(path)
         local = latest_model_dir('models/daily')
         if local is not None:
-            return local
+            candidates.append(local)
+        if candidates:
+            # Prefer stacked artifacts (production model) over legacy ensembles,
+            # then the newest by directory name.
+            stacked = [path for path in candidates if StackedModel.exists(path)]
+            pool = stacked or candidates
+            return sorted(pool, key=lambda path: path.name)[-1]
         try:
             return ensure_latest_model_artifact('models/daily')
         except Exception as exc:

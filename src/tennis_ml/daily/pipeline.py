@@ -103,16 +103,29 @@ def run_strategy_step(
     markets: pd.DataFrame | None = None,
     config: StrategyConfig | None = None,
     prediction_lookback_days: int = 7,
+    build_board: bool = True,
 ) -> dict[str, Any]:
     """Generate picks from Kalshi markets x known predictions, then settle past picks.
 
-    Matches every open Kalshi tennis market against recent rows in the
-    ``predictions`` table (the stacked fair probabilities persisted by
-    :class:`TennisPredictionService`), applies the strategy gates, persists
-    the resulting picks, and settles previously open picks against newly
-    ingested completed matches (writing settled paper trades).
+    First builds today's matchup board from Kalshi's per-match series (which
+    predicts every scheduled matchup on the fly and persists predictions +
+    picks), then matches any remaining open Kalshi tennis markets against
+    recent rows in the ``predictions`` table, applies the strategy gates,
+    persists the resulting picks, and settles previously open picks against
+    newly ingested completed matches (writing settled paper trades).
     """
     config = config or StrategyConfig()
+
+    board_rows = 0
+    board_error = None
+    if build_board:
+        try:
+            from .matchups import build_matchup_board
+
+            board = build_matchup_board(db_path=db_path, config=config)
+            board_rows = int(len(board))
+        except Exception as exc:  # board failures must not block settlement
+            board_error = str(exc)
     if markets is None or markets.empty:
         markets = read_table('odds_snapshots', db_path=db_path)
         if not markets.empty and 'snapshot_time' in markets.columns:
@@ -134,6 +147,8 @@ def run_strategy_step(
     settlement = settle_picks(db_path, completed, fee_rate=config.fee_rate)
 
     return {
+        'board_rows': board_rows,
+        'board_error': board_error,
         'markets_considered': int(len(markets)) if markets is not None else 0,
         'predictions_considered': int(len(predictions)) if predictions is not None else 0,
         'candidates_matched': int(len(candidates)),

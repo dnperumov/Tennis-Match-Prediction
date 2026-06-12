@@ -1,57 +1,69 @@
-"""Today's Picks: open strategy picks ranked by tier and edge."""
+"""Today's Matchups: every Kalshi ATP matchup scored by the model, plus open picks."""
 
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 import pandas as pd
 import streamlit as st
 
 from ui.common import TIER_ORDER, cents, money, pct, safe_fetch_picks, tier_badge
 
+_TIER_LABELS = {
+    'value_bet': '💰 Value bet',
+    'confident_pick': '✅ Confident',
+    'lean': '📈 Lean',
+    'no_bet': '— No bet',
+}
+
 
 def render() -> None:
-    st.title("📋 Today's Picks")
+    st.title("📋 Today's Matchups")
     db_path = st.session_state.get('db_path', 'data/live/tennis_live.db')
 
-    button_col, caption_col = st.columns([1, 3])
+    date_col, surface_col, button_col = st.columns([1.2, 1, 1.4])
+    with date_col:
+        board_date = st.date_input('Match date', value=datetime.now(timezone.utc).date())
+    with surface_col:
+        surface_choice = st.selectbox('Surface', ['Auto', 'Hard', 'Clay', 'Grass'], index=0)
     with button_col:
-        refresh = st.button('Refresh picks from Kalshi', type='primary', width='stretch')
-    with caption_col:
-        st.caption(
-            'Matches the latest Kalshi tennis snapshot against recent stored model '
-            'predictions, applies the strategy gates, and settles past picks.'
-        )
+        st.write('')
+        refresh = st.button('Refresh from Kalshi', type='primary', width='stretch')
+    st.caption(
+        'Pulls every ATP matchup listed on Kalshi for the selected date, scores each with the '
+        'production model, and applies the strategy gates. Picks are persisted for paper trading.'
+    )
 
     if refresh:
-        with st.spinner('Running strategy step against the latest Kalshi snapshot...'):
+        with st.spinner('Fetching Kalshi matchups and scoring with the model...'):
             try:
-                from tennis_ml.daily import run_strategy_step
+                from tennis_ml.daily import build_matchup_board
 
-                summary = run_strategy_step(db_path=db_path)
-                tiers = summary.get('tiers', {})
-                settlement = summary.get('settlement', {})
-                st.success(
-                    f"Markets considered: {summary.get('markets_considered', 0)} · "
-                    f"predictions considered: {summary.get('predictions_considered', 0)} · "
-                    f"matched: {summary.get('candidates_matched', 0)} · "
-                    f"picks written: {summary.get('picks_written', 0)} "
-                    f"(value {tiers.get('value_bet', 0)}, confident {tiers.get('confident_pick', 0)}, "
-                    f"lean {tiers.get('lean', 0)}, no-bet {tiers.get('no_bet', 0)}) · "
-                    f"settled: {settlement.get('settled', 0)} "
-                    f"({settlement.get('won', 0)}W-{settlement.get('lost', 0)}L)"
+                board = build_matchup_board(
+                    db_path=db_path,
+                    board_date=board_date.isoformat(),
+                    surface=None if surface_choice == 'Auto' else surface_choice,
                 )
+                st.session_state['matchup_board'] = board
+                st.session_state['matchup_board_date'] = board_date.isoformat()
             except Exception as exc:
-                st.error(f'Strategy step failed: {exc}')
+                st.error(f'Matchup board failed: {exc}')
 
+    board = st.session_state.get('matchup_board')
+    if board is not None and not board.empty:
+        _render_board(board, st.session_state.get('matchup_board_date', ''))
+    elif board is not None:
+        st.info('Kalshi lists no ATP matchups for the selected date. Try the next day '
+                '(markets usually open the evening before).')
+    else:
+        st.info('Click **Refresh from Kalshi** to load and score the matchups for the selected date.')
+
+    st.divider()
+    st.subheader('Open picks')
     picks = safe_fetch_picks(db_path, status='open')
     if picks.empty:
-        st.info(
-            'No open picks yet. This usually means either no open Kalshi tennis markets '
-            'matched a stored model prediction, or the daily pipeline has not run. '
-            'Score upcoming matches on the Probability Calculator page (predictions are '
-            'stored automatically), then click **Refresh picks from Kalshi** above.'
-        )
+        st.info('No open picks yet — refresh the board above to generate them from live Kalshi markets.')
         return
 
     picks = _rank_picks(picks)
@@ -66,6 +78,59 @@ def render() -> None:
 
     for _, pick in picks.iterrows():
         _pick_card(pick)
+
+
+def _render_board(board: pd.DataFrame, board_date: str) -> None:
+    board = board.copy()
+    quotes = pd.to_numeric(board.get('player1_yes_ask'), errors='coerce')
+    if quotes.isna().all():
+        st.warning(
+            'Kalshi returned no quotes (bid/ask). Quote data requires API credentials: set '
+            '`KALSHI_API_KEY_ID` and `KALSHI_PRIVATE_KEY_PEM` in the app environment. '
+            'Model probabilities are still shown below.'
+        )
+
+    if 'confidence_tier' in board.columns:
+        board['tier_rank'] = board['confidence_tier'].map(TIER_ORDER).fillna(9)
+        board = board.sort_values(['tier_rank', 'net_ev'], ascending=[True, False]).drop(columns=['tier_rank'])
+
+    summary_cols = st.columns(4)
+    summary_cols[0].metric('Matchups', len(board))
+    if 'confidence_tier' in board.columns:
+        summary_cols[1].metric('Value bets', int((board['confidence_tier'] == 'value_bet').sum()))
+        summary_cols[2].metric('Confident picks', int((board['confidence_tier'] == 'confident_pick').sum()))
+        stakes = pd.to_numeric(board.get('stake_suggested'), errors='coerce').fillna(0)
+        summary_cols[3].metric('Suggested exposure', money(stakes.sum()))
+
+    display = pd.DataFrame({
+        'Matchup': board['player1'] + ' vs ' + board['player2'],
+        'P1 model': pd.to_numeric(board.get('player1_probability'), errors='coerce'),
+        'P1 ask': pd.to_numeric(board.get('player1_yes_ask'), errors='coerce'),
+        'P2 model': pd.to_numeric(board.get('player2_probability'), errors='coerce'),
+        'P2 ask': pd.to_numeric(board.get('player2_yes_ask'), errors='coerce'),
+        'Pick': board.get('pick_player'),
+        'Tier': board.get('confidence_tier', pd.Series(dtype=object)).map(_TIER_LABELS),
+        'Net EV': pd.to_numeric(board.get('net_ev'), errors='coerce'),
+        'Stake': pd.to_numeric(board.get('stake_suggested'), errors='coerce'),
+        'Surface': board.get('surface'),
+    })
+    if 'error' in board.columns and board['error'].notna().any():
+        display['Error'] = board['error']
+
+    st.dataframe(
+        display,
+        hide_index=True,
+        width='stretch',
+        column_config={
+            'P1 model': st.column_config.NumberColumn(format='percent', help='Model fair probability, player 1'),
+            'P2 model': st.column_config.NumberColumn(format='percent', help='Model fair probability, player 2'),
+            'P1 ask': st.column_config.NumberColumn(format='dollar', help='Kalshi YES ask, player 1'),
+            'P2 ask': st.column_config.NumberColumn(format='dollar', help='Kalshi YES ask, player 2'),
+            'Net EV': st.column_config.NumberColumn(format='percent', help='Net EV after Kalshi fees on the picked side'),
+            'Stake': st.column_config.NumberColumn(format='dollar'),
+        },
+    )
+    st.caption(f'Board for {board_date} · prices are Kalshi YES asks in dollars (≈ probability).')
 
 
 def _rank_picks(picks: pd.DataFrame) -> pd.DataFrame:

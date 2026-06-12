@@ -35,10 +35,16 @@ def latest_model_dir(model_root: str | Path = DEFAULT_MODEL_ROOT) -> Path | None
 def ensure_latest_model_artifact(
     model_root: str | Path = DEFAULT_MODEL_ROOT,
     artifact_url: str | None = None,
+    force: bool = False,
 ) -> Path:
-    """Return a local model dir, downloading the latest release artifact if needed."""
+    """Return a local model dir, downloading the latest release artifact if needed.
+
+    A local dir that only holds a legacy ensemble (no stacked_model.joblib) is
+    treated as stale: the release artifact is fetched so the production
+    stacked model wins over old pickles.
+    """
     existing = latest_model_dir(model_root)
-    if existing is not None:
+    if existing is not None and not force and (existing / 'stacked_model.joblib').exists():
         return existing
 
     url = artifact_url or os.getenv('MODEL_ARTIFACT_URL') or DEFAULT_MODEL_ARTIFACT_URL

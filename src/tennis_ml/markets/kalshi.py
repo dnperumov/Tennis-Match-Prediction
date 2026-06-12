@@ -1,9 +1,10 @@
 """
 Read-only Kalshi market data connector.
 
-This connector uses public market/event endpoints for discovery and top-of-book
-quotes. Authenticated full order books and order placement should be added only
-after paper-trading gates pass.
+Event/market discovery works unauthenticated, but Kalshi gates quote fields
+(bid/ask/last/volume) behind authentication: requests are signed automatically
+whenever KALSHI_API_KEY_ID and KALSHI_PRIVATE_KEY_PEM are available. Order
+placement is intentionally not implemented (paper trading only).
 """
 
 from __future__ import annotations
@@ -11,10 +12,12 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import time
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 import pandas as pd
@@ -22,7 +25,16 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
 
-KALSHI_BASE_URL = 'https://external-api.kalshi.com/trade-api/v2'
+KALSHI_BASE_URL = 'https://api.elections.kalshi.com/trade-api/v2'
+
+ATP_MATCH_SERIES = 'KXATPMATCH'
+WTA_MATCH_SERIES = 'KXWTAMATCH'
+
+_TICKER_DATE_PATTERN = re.compile(r'-(\d{2})([A-Z]{3})(\d{2})')
+_MONTHS = {
+    'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
+    'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12,
+}
 
 
 @dataclass
@@ -41,14 +53,21 @@ class KalshiClient:
             private_key_pem=os.getenv('KALSHI_PRIVATE_KEY_PEM'),
         )
 
-    def get_json(self, path: str, params: dict[str, Any] | None = None, authenticated: bool = False) -> dict:
+    @property
+    def has_credentials(self) -> bool:
+        return bool(self.api_key_id and self.private_key_pem)
+
+    def get_json(self, path: str, params: dict[str, Any] | None = None, authenticated: bool | None = None) -> dict:
         query = urllib.parse.urlencode({k: v for k, v in (params or {}).items() if v is not None})
         url = f'{self.base_url.rstrip("/")}/{path.lstrip("/")}'
         if query:
             url = f'{url}?{query}'
         headers = {'Accept': 'application/json'}
-        if authenticated:
-            headers.update(self.auth_headers('GET', path))
+        # Sign whenever credentials exist: Kalshi returns null quote fields on
+        # unauthenticated market-data requests.
+        if authenticated or (authenticated is None and self.has_credentials):
+            signed_path = urllib.parse.urlsplit(url).path
+            headers.update(self.auth_headers('GET', signed_path))
         request = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             return json.loads(response.read().decode('utf-8'))
@@ -84,6 +103,29 @@ class KalshiClient:
         now = int(time.time())
         events = self.get_events(status='open', with_nested_markets=True, min_close_ts=now, max_pages=max_pages)
         return [event for event in events if event_mentions_tennis(event)]
+
+    def get_match_events(
+        self,
+        series_ticker: str = ATP_MATCH_SERIES,
+        status: str = 'open',
+        max_pages: int = 10,
+    ) -> list[dict]:
+        """Fetch head-to-head match events (one event per matchup, one market per player)."""
+        events = []
+        cursor = None
+        for _ in range(max_pages):
+            payload = self.get_json('/events', {
+                'series_ticker': series_ticker,
+                'status': status,
+                'with_nested_markets': 'true',
+                'limit': 200,
+                'cursor': cursor,
+            })
+            events.extend(payload.get('events', []))
+            cursor = payload.get('cursor')
+            if not cursor:
+                break
+        return events
 
     def get_market_orderbook(self, ticker: str) -> dict:
         return self.get_json(f'/markets/{ticker}/orderbook', authenticated=True)
@@ -165,6 +207,83 @@ def normalize_kalshi_events(events: list[dict]) -> pd.DataFrame:
                 'source': 'kalshi',
             })
     return pd.DataFrame(rows)
+
+
+def market_quote(market: dict) -> dict[str, float | None]:
+    """Extract quote fields in 0-1 probability units (prefer dollar fields, fall back to cents)."""
+    def price(dollar_key: str, cent_key: str) -> float | None:
+        dollars = to_float(market.get(dollar_key))
+        if dollars is not None:
+            return dollars
+        cents = to_float(market.get(cent_key))
+        return cents / 100 if cents is not None else None
+
+    return {
+        'yes_bid': price('yes_bid_dollars', 'yes_bid'),
+        'yes_ask': price('yes_ask_dollars', 'yes_ask'),
+        'no_bid': price('no_bid_dollars', 'no_bid'),
+        'no_ask': price('no_ask_dollars', 'no_ask'),
+        'last_price': price('last_price_dollars', 'last_price'),
+        'volume': to_float(market.get('volume_fp')) or to_float(market.get('volume')),
+        'liquidity': to_float(market.get('liquidity_dollars')) or to_float(market.get('liquidity')),
+    }
+
+
+def match_date_from_ticker(event_ticker: str | None) -> str | None:
+    """KXATPMATCH-26JUN12MEDCIL -> '2026-06-12'."""
+    if not event_ticker:
+        return None
+    found = _TICKER_DATE_PATTERN.search(event_ticker)
+    if not found:
+        return None
+    year_part, month_part, day_part = found.groups()
+    month = _MONTHS.get(month_part)
+    if not month:
+        return None
+    try:
+        return date(2000 + int(year_part), month, int(day_part)).isoformat()
+    except ValueError:
+        return None
+
+
+def parse_match_event(event: dict) -> dict | None:
+    """Turn a head-to-head match event into a matchup dict, or None if malformed.
+
+    Expects exactly two nested markets, one per player, with the player's full
+    name in yes_sub_title.
+    """
+    markets = event.get('markets') or []
+    if len(markets) != 2:
+        return None
+    players = [str(market.get('yes_sub_title') or '').strip() for market in markets]
+    if not all(players) or players[0] == players[1]:
+        return None
+
+    event_ticker = event.get('event_ticker')
+    match_date = match_date_from_ticker(event_ticker)
+    if match_date is None:
+        expiration = markets[0].get('expected_expiration_time') or markets[0].get('close_time')
+        if expiration:
+            match_date = str(expiration)[:10]
+
+    matchup = {
+        'event_ticker': event_ticker,
+        'series_ticker': event.get('series_ticker'),
+        'title': event.get('title'),
+        'match_date': match_date,
+        'close_time': markets[0].get('close_time'),
+        'player1': players[0],
+        'player2': players[1],
+    }
+    for side, market in zip(('player1', 'player2'), markets):
+        quote = market_quote(market)
+        matchup[f'{side}_market_ticker'] = market.get('ticker')
+        matchup[f'{side}_yes_bid'] = quote['yes_bid']
+        matchup[f'{side}_yes_ask'] = quote['yes_ask']
+        matchup[f'{side}_last_price'] = quote['last_price']
+        matchup[f'{side}_volume'] = quote['volume']
+        matchup[f'{side}_liquidity'] = quote['liquidity']
+    return matchup
 
 
 def to_float(value) -> float | None:

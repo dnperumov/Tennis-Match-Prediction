@@ -54,7 +54,7 @@ def _sidebar() -> None:
 _sidebar()
 
 navigation = st.navigation([
-    st.Page(page_picks.render, title="Today's Picks", icon='📋', url_path='picks', default=True),
+    st.Page(page_picks.render, title="Today's Matchups", icon='📋', url_path='picks', default=True),
     st.Page(page_calculator.render, title='Probability Calculator', icon='🎯', url_path='calculator'),
     st.Page(page_paper.render, title='Paper Trading', icon='📈', url_path='paper-trading'),
     st.Page(page_research.render, title='Research / Evidence', icon='🔬', url_path='research'),
