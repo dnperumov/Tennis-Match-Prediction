@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import List, Tuple
 
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.impute import SimpleImputer
@@ -39,6 +40,14 @@ from tennis_ml.data import DataLoader
 from tennis_ml.features import BettingFeatureEngineer, EloTracker, FeatureEngineer
 from tennis_ml.features.columns import FEATURE_COLUMNS
 from tennis_ml.models import ModelTrainer
+from tennis_ml.models.stacked import (  # noqa: F401 (re-exported for compatibility)
+    StackedModel,
+    blend_probabilities,
+    choose_blend_weight,
+    fit_stacked_classifier,
+    logit,
+    predict_stacked_classifier,
+)
 
 
 CACHE_VERSION = 'walk-forward-cache-v1'
@@ -68,8 +77,9 @@ def main():
     parser.add_argument('--exclude-slams', action='store_true')
     parser.add_argument('--surface', choices=['Hard', 'Clay', 'Grass'])
     parser.add_argument('--output-dir', default='walk_forward_results')
-    parser.add_argument('--probability-model', choices=['residual', 'classifier'], default='residual',
-                        help='Use market-residual probabilities or the original classifiers')
+    parser.add_argument('--probability-model', choices=['residual', 'classifier', 'stacked'], default='residual',
+                        help='Use market-residual probabilities, the original classifiers, '
+                             'or a market-aware classifier blended with the market in logit space')
     parser.add_argument('--cache-dir', default='.cache/walk_forward',
                         help='Directory for aligned match and fold feature caches')
     parser.add_argument('--no-cache', action='store_true',
@@ -144,6 +154,15 @@ def main():
 
         if args.probability_model == 'residual':
             results = train_residual_models(
+                train_features,
+                test_features,
+                available_features,
+                top_10_train_mask,
+                top_10_test_mask,
+            )
+            predictions = results.pop('predictions')
+        elif args.probability_model == 'stacked':
+            results = train_stacked_models(
                 train_features,
                 test_features,
                 available_features,
@@ -482,7 +501,64 @@ def train_residual_models(
         axis=1
     )
     predictions['predicted_winner'] = predictions.apply(predicted_winner_from_probability, axis=1)
-    predictions['prediction_correct'] = predictions['predicted_winner'] == predictions['winner_name']
+    predictions['prediction_correct'] = prediction_correctness(predictions)
+    results['predictions'] = predictions
+    return results
+
+
+def train_stacked_models(
+    train_features: pd.DataFrame,
+    test_features: pd.DataFrame,
+    feature_columns: list[str],
+    top_10_train_mask: pd.Series,
+    top_10_test_mask: pd.Series,
+) -> dict:
+    """Market-aware classifier blended with the no-vig market in logit space.
+
+    The blend weight is selected on the most recent slice of the training
+    window, so when the classifier adds no information beyond the market the
+    final probabilities collapse toward the market line instead of fighting it.
+    """
+    predictions = test_features.copy()
+    predictions['top_10_match'] = top_10_test_mask
+    predictions['model_type'] = 'other'
+    predictions.loc[top_10_test_mask, 'model_type'] = 'top_10'
+    predictions['player1_probability'] = pd.NA
+    predictions['player2_probability'] = pd.NA
+    results = {}
+
+    stacked_model = StackedModel()
+    stacked_model.fit(train_features, feature_columns)
+    stacked_probabilities = stacked_model.predict_proba(test_features)
+
+    for model_name, test_mask in [
+        ('top_10', top_10_test_mask),
+        ('other', ~top_10_test_mask),
+    ]:
+        test_mask = test_mask & test_features['player1_market_probability_novig'].notna()
+        if model_name not in stacked_model.submodels_ or not test_mask.any():
+            continue
+
+        blend_weight = stacked_model.submodels_[model_name]['blend_weight']
+        player1_probability = stacked_probabilities.loc[test_mask].astype(float)
+        predictions.loc[test_mask, 'player1_probability'] = player1_probability
+        predictions.loc[test_mask, 'player2_probability'] = 1 - player1_probability
+        metrics = probability_metrics(
+            test_features.loc[test_mask, 'result'],
+            player1_probability,
+        )
+        metrics['blend_weight'] = blend_weight
+        results[model_name] = {'metrics': metrics}
+        print(f'  {model_name}: blend weight {blend_weight:.2f} (model share), '
+              f'accuracy {metrics["accuracy"]:.4f}')
+
+    predictions['winner_probability'] = predictions.apply(
+        lambda row: row['player1_probability'] if row['player1'] == row['winner_name']
+        else row['player2_probability'],
+        axis=1
+    )
+    predictions['predicted_winner'] = predictions.apply(predicted_winner_from_probability, axis=1)
+    predictions['prediction_correct'] = prediction_correctness(predictions)
     results['predictions'] = predictions
     return results
 
@@ -491,6 +567,13 @@ def predicted_winner_from_probability(row: pd.Series):
     if pd.isna(row['player1_probability']) or pd.isna(row['player2_probability']):
         return pd.NA
     return row['player1'] if row['player1_probability'] >= row['player2_probability'] else row['player2']
+
+
+def prediction_correctness(predictions: pd.DataFrame) -> pd.Series:
+    # Unscored matches (no predicted winner) must stay NA — a plain == would
+    # record them as incorrect predictions and skew accuracy.
+    correct = (predictions['predicted_winner'] == predictions['winner_name']).astype('boolean')
+    return correct.mask(predictions['predicted_winner'].isna())
 
 
 def fit_residual_model(X_train: pd.DataFrame, y_train: pd.Series) -> dict:

@@ -225,11 +225,19 @@ def score_matches(
         axis=1
     )
     predictions['predicted_winner'] = predictions.apply(
-        lambda row: row['player1'] if row['player1_probability'] >= row['player2_probability']
-        else row['player2'],
+        lambda row: pd.NA
+        if pd.isna(row['player1_probability']) or pd.isna(row['player2_probability'])
+        else (row['player1'] if row['player1_probability'] >= row['player2_probability']
+              else row['player2']),
         axis=1
     )
-    predictions['prediction_correct'] = predictions['predicted_winner'] == predictions['winner_name']
+    # Unscored matches (no predicted winner) must stay NA — a plain == would
+    # record them as incorrect predictions and skew accuracy.
+    predictions['prediction_correct'] = (
+        (predictions['predicted_winner'] == predictions['winner_name'])
+        .astype('boolean')
+        .mask(predictions['predicted_winner'].isna())
+    )
     return predictions
 
 

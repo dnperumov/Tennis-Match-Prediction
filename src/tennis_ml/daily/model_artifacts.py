@@ -22,7 +22,10 @@ def latest_model_dir(model_root: str | Path = DEFAULT_MODEL_ROOT) -> Path | None
         return None
     candidates = [
         path for path in root.iterdir()
-        if path.is_dir() and (path / 'daily_ensemble_model.pkl').exists()
+        if path.is_dir() and (
+            (path / 'stacked_model.joblib').exists()
+            or (path / 'daily_ensemble_model.pkl').exists()
+        )
     ]
     if not candidates:
         return None

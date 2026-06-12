@@ -13,6 +13,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from tennis_ml.backtesting.odds_loader import OddsLoader
 from tennis_ml.backtesting.pnl_backtester import PnLBacktester
 from tennis_ml.backtesting.strategy_rules import DEFAULT_STRATEGY
 from tennis_ml.data import DataLoader
@@ -20,9 +21,12 @@ from tennis_ml.data.player import Player
 from tennis_ml.features import BettingFeatureEngineer, EloTracker, FeatureEngineer
 from tennis_ml.features.columns import FEATURE_COLUMNS
 from tennis_ml.live_stats.database import DEFAULT_DB_PATH, insert_model_run, insert_prediction, latest_model_run
-from tennis_ml.models import ModelTrainer
+from tennis_ml.models.stacked import StackedModel
 
 from .model_artifacts import ensure_latest_model_artifact, latest_model_dir
+
+
+DEFAULT_ODDS_FILES = ('data/odds/atp_odds_2013_2026.csv',)
 
 
 TOURNEY_IMPORTANCE = {'G': 5, 'M': 4, 'A': 3, 'C': 2, 'F': 1, 'D': 1}
@@ -40,6 +44,7 @@ class MatchPredictionRequest:
     match_date: str | None = None
     player1_odds: float | None = None
     player2_odds: float | None = None
+    kalshi_yes_price: float | None = None  # Kalshi YES price (0-1) for player1 winning
     model_dir: str | Path | None = None
     friction_bps: float = 200.0
 
@@ -52,6 +57,18 @@ class MatchPredictionRequest:
             raise ValueError('player1_odds must be greater than 1.0.')
         if self.player2_odds is not None and self.player2_odds <= 1:
             raise ValueError('player2_odds must be greater than 1.0.')
+        if self.kalshi_yes_price is not None and not 0 < self.kalshi_yes_price < 1:
+            raise ValueError('kalshi_yes_price must be between 0 and 1 (exclusive).')
+
+    def market_probabilities(self) -> tuple[float, float] | None:
+        """No-vig market probability pair (player1, player2), if any market is supplied."""
+        if self.player1_odds and self.player2_odds:
+            raw1, raw2 = 1 / self.player1_odds, 1 / self.player2_odds
+            overround = raw1 + raw2
+            return raw1 / overround, raw2 / overround
+        if self.kalshi_yes_price is not None:
+            return float(self.kalshi_yes_price), float(1 - self.kalshi_yes_price)
+        return None
 
 
 def train_daily_model(
@@ -60,8 +77,15 @@ def train_daily_model(
     model_root: str | Path = 'models/daily',
     db_path: str | Path = DEFAULT_DB_PATH,
     start_year: int = 2000,
+    odds_files: tuple[str, ...] | list[str] = DEFAULT_ODDS_FILES,
 ) -> dict[str, Any]:
-    """Train a daily no-lookahead model from historical ATP data."""
+    """Train the daily stacked (market-aware) model from historical ATP data.
+
+    Historical book odds are attached the same way ``walk_forward.py`` does
+    (``OddsLoader.align_match_dates`` + ``attach_odds``), so the classifier
+    sees the no-vig market probability features and a per-submodel logit
+    blend weight is selected on a recent validation slice.
+    """
     as_of = pd.to_datetime(as_of_date or pd.Timestamp.utcnow().date())
     artifact_dir = Path(model_root) / as_of.strftime('%Y-%m-%d')
     artifact_dir.mkdir(parents=True, exist_ok=True)
@@ -72,6 +96,11 @@ def train_daily_model(
     matches = matches[pd.to_datetime(matches[date_column], errors='coerce') <= as_of].copy()
     if len(matches) < 500:
         raise ValueError(f'Not enough historical rows to train daily model: {len(matches)}')
+
+    odds_loader = OddsLoader()
+    odds = _load_historical_odds(odds_loader, odds_files, as_of)
+    if odds is not None:
+        matches = odds_loader.align_match_dates(matches, odds)
 
     sort_columns = [col for col in ['match_date', 'tourney_date', 'tourney_id', 'match_num'] if col in matches.columns]
     matches = matches.sort_values(sort_columns).reset_index(drop=True)
@@ -90,38 +119,58 @@ def train_daily_model(
         elo_tracker=elo,
         random_state=99,
     )
-    available_features = [column for column in FEATURE_COLUMNS if column in features.columns]
-    available_features = [column for column in available_features if not column.startswith('player1_market') and not column.startswith('player2_market') and column not in {'market_probability_diff', 'market_overround'}]
+    if odds is not None:
+        features = odds_loader.attach_odds(features, odds)
     features = features.dropna(subset=['result'])
-    split = max(1, int(len(features) * 0.8))
-    train = features.iloc[:split].copy()
-    validation = features.iloc[split:].copy()
-    if validation.empty:
-        validation = train.tail(min(250, len(train))).copy()
 
-    trainer = ModelTrainer(model_dir=str(artifact_dir))
-    result = trainer.train_ensemble_model(
-        train[available_features],
-        train['result'],
-        validation[available_features],
-        validation['result'],
-    )
-    trainer.save_model('daily_ensemble', result['model'], result['scaler'], result['features'], result.get('imputer'))
+    model = StackedModel()
+    model.fit(features, FEATURE_COLUMNS)
+    model.save(artifact_dir)
 
+    submodel_meta = model.metadata_.get('submodels', {})
     metadata = {
         'model_run_id': f'daily-{as_of.strftime("%Y-%m-%d")}',
-        'trained_at': datetime.now(timezone.utc).isoformat(),
+        'model_kind': 'stacked',
+        'trained_at': model.metadata_.get('trained_at', datetime.now(timezone.utc).isoformat()),
         'as_of_date': as_of.strftime('%Y-%m-%d'),
         'artifact_dir': str(artifact_dir),
-        'training_rows': int(len(train)),
-        'validation_rows': int(len(validation)),
-        'metrics': result.get('metrics', {}),
-        'features': result['features'],
-        'notes': 'Daily full retrain from historical ATP data. Live DB rows are stored separately until provider mapping is audited.',
+        'training_rows': int(len(features)),
+        'validation_rows': int(sum(meta.get('validation_rows', 0) for meta in submodel_meta.values())),
+        'training_window': model.metadata_.get('training_window'),
+        'market_features_used': model.metadata_.get('market_features_used'),
+        'metrics': {
+            f'{name}_blend_weight': meta.get('blend_weight')
+            for name, meta in submodel_meta.items()
+        },
+        'features': model.feature_columns_,
+        'odds_files': [str(path) for path in (odds_files or [])] if odds is not None else [],
+        'notes': 'Daily stacked retrain (XGBoost + no-vig market blend) from historical ATP data with Tennis-Data odds features.',
     }
     (artifact_dir / 'metadata.json').write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding='utf-8')
     insert_model_run(metadata, db_path=db_path)
     return metadata
+
+
+def _load_historical_odds(
+    odds_loader: OddsLoader,
+    odds_files: tuple[str, ...] | list[str],
+    as_of: pd.Timestamp,
+) -> pd.DataFrame | None:
+    """Load and concatenate historical odds files; None when unavailable."""
+    frames = []
+    for path in odds_files or []:
+        candidate = Path(path)
+        if not candidate.exists():
+            continue
+        try:
+            frames.append(odds_loader.load(str(candidate)))
+        except Exception:
+            continue
+    if not frames:
+        return None
+    odds = pd.concat(frames, ignore_index=True)
+    odds = odds[pd.to_datetime(odds['match_date'], errors='coerce') <= as_of]
+    return odds if not odds.empty else None
 
 
 class TennisPredictionService:
@@ -143,22 +192,42 @@ class TennisPredictionService:
         as_of = pd.to_datetime(request.match_date or pd.Timestamp.utcnow().date())
         context = self._build_context(as_of)
         feature_row = self._feature_row(request, context, as_of)
-        features = self.bundle['features']
-        frame = pd.DataFrame([feature_row]).reindex(columns=features, fill_value=np.nan)
-        if self.bundle.get('imputer') is not None:
-            values = pd.DataFrame(
-                self.bundle['imputer'].transform(frame),
-                columns=features,
-            )
+        market = request.market_probabilities()
+        if market is not None:
+            feature_row['player1_market_probability_novig'] = market[0]
+            feature_row['player2_market_probability_novig'] = market[1]
+            feature_row['market_probability_diff'] = market[0] - market[1]
+            if request.player1_odds and request.player2_odds:
+                feature_row['market_overround'] = 1 / request.player1_odds + 1 / request.player2_odds
+            else:
+                feature_row['market_overround'] = 1.0
+
+        if self.bundle.get('kind') == 'stacked':
+            stacked: StackedModel = self.bundle['stacked']
+            frame = pd.DataFrame([feature_row])
+            p1 = float(stacked.predict_proba(frame).iloc[0])
+            p2 = 1 - p1
         else:
-            values = frame.fillna(0)
-        values = self.bundle['scaler'].transform(values)
-        probabilities = self.bundle['model'].predict_proba(values)[0]
-        class_probabilities = dict(zip(self.bundle['model'].classes_, probabilities))
-        p1 = float(class_probabilities.get(1, 0.0))
-        p2 = float(class_probabilities.get(2, 1 - p1))
+            features = self.bundle['features']
+            frame = pd.DataFrame([feature_row]).reindex(columns=features, fill_value=np.nan)
+            if self.bundle.get('imputer') is not None:
+                values = pd.DataFrame(
+                    self.bundle['imputer'].transform(frame),
+                    columns=features,
+                )
+            else:
+                values = frame.fillna(0)
+            values = self.bundle['scaler'].transform(values)
+            probabilities = self.bundle['model'].predict_proba(values)[0]
+            class_probabilities = dict(zip(self.bundle['model'].classes_, probabilities))
+            p1 = float(class_probabilities.get(1, 0.0))
+            p2 = float(class_probabilities.get(2, 1 - p1))
         result = self._decision(request, p1, p2, feature_row)
         result.update({
+            'model_kind': self.bundle.get('kind', 'legacy'),
+            'market_probability_player1': market[0] if market is not None else None,
+            'market_probability_player2': market[1] if market is not None else None,
+            'kalshi_yes_price': request.kalshi_yes_price,
             'prediction_id': self._prediction_id(request, p1, p2),
             'prediction_time': datetime.now(timezone.utc).isoformat(),
             'model_run_id': self.bundle.get('metadata', {}).get('model_run_id'),
@@ -205,6 +274,8 @@ class TennisPredictionService:
         p2_hand = last_value(p2.hands, 'R')
         betting = BettingFeatureEngineer()
         row = {
+            'player1_rank': p1_rank,
+            'player2_rank': p2_rank,
             'rank_diff': p1_rank - p2_rank,
             'log_rank_diff': np.log1p(abs(p1_rank - p2_rank)),
             'top_10_vs_not': ((p1_rank <= 10) and (p2_rank > 10)) or ((p2_rank <= 10) and (p1_rank > 10)),
@@ -326,7 +397,7 @@ class TennisPredictionService:
         run = latest_model_run(self.db_path)
         if run and run.get('artifact_dir'):
             path = Path(run['artifact_dir'])
-            if (path / 'daily_ensemble_model.pkl').exists():
+            if StackedModel.exists(path) or (path / 'daily_ensemble_model.pkl').exists():
                 return path
         local = latest_model_dir('models/daily')
         if local is not None:
@@ -343,7 +414,14 @@ class TennisPredictionService:
     def _load_bundle(model_dir: Path) -> dict[str, Any]:
         metadata_path = model_dir / 'metadata.json'
         metadata = json.loads(metadata_path.read_text(encoding='utf-8')) if metadata_path.exists() else {}
+        if StackedModel.exists(model_dir):
+            return {
+                'kind': 'stacked',
+                'stacked': StackedModel.load(model_dir),
+                'metadata': metadata,
+            }
         bundle = {
+            'kind': 'legacy',
             'model': joblib.load(model_dir / 'daily_ensemble_model.pkl'),
             'scaler': joblib.load(model_dir / 'daily_ensemble_scaler.pkl'),
             'features': joblib.load(model_dir / 'daily_ensemble_features.pkl'),
